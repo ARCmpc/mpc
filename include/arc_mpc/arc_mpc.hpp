@@ -17,6 +17,7 @@
 #include <sstream>
 #include <sys/time.h>
 #include <algorithm>
+#include <Eigen/Dense>
 
 class MPC{
 
@@ -29,6 +30,8 @@ public:
 	float distanceIJ(int from_i , int to_i );
 	int indexOfDistanceFront(int i, float d);
 	int indexOfDistanceBack(int i, float d);
+	void calculateParamFun(Eigen::MatrixXd a);
+	void pathToVector();
 
 	void readPathFromTxt(std::string inFileName);
 
@@ -50,6 +53,9 @@ private:
 	// Number of path points.
 	int n_poses_path_;
 	int slow_down_index_;
+
+	//VectorPath
+	Eigen::MatrixXd d_;
 	// 3. Variables (will be changed during process.)
 	// Variable which saves the incoming state from L&M.
 	arc_msgs::State state_;
