@@ -53,7 +53,6 @@ private:
 	// Number of path points.
 	int n_poses_path_;
 	int slow_down_index_;
-
 	//VectorPath
 	Eigen::MatrixXd d_;
 	// 3. Variables (will be changed during process.)
