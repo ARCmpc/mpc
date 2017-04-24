@@ -48,6 +48,7 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 	steps_in_horizon_=TIME_HORIZON/SAMPLING_TIME;	
 	
 //TEST
+
 /*
 state_.current_arrayposition=815;
 findReferencePoints();
@@ -56,6 +57,7 @@ for(int i=0; i<2*steps_in_horizon_;i++)
 std::cout<<ref_xy_[i]<<std::endl;
 }
 */
+
 	std::cout << std::endl << "MPC: Consturctor init, path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
 }
 
