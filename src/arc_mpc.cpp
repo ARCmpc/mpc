@@ -1,7 +1,15 @@
 #include "../include/arc_mpc/arc_mpc.hpp"
 
-float SLOW_DOWN_DISTANCE=10; 
+float TIME_HORIZON=10;
+float SAMPLING_TIME=1;
 int QUEUE_LENGTH;
+float MAX_LATERAL_ACCELERATION=8;
+float MAX_ABSOLUTE_VELOCITY=10;
+float K1_LAD_V=1;
+float K2_LAD_V=1;
+float SLOW_DOWN_DISTANCE=10; 
+float SLOW_DOWN_PUFFER=2;
+float V_FREEDOM=0.2;
 std::string STELLGROESSEN_TOPIC;
 std::string TRACKING_ERROR_TOPIC;
 std::string NAVIGATION_INFO_TOPIC;
@@ -12,7 +20,13 @@ std::string PATH_NAME_EDITED;
 
 MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 {
+	n_ = n;
+	n->getParam("/control/K1_LAD_V",K1_LAD_V);
+	n->getParam("/control/K2_LAD_V",K2_LAD_V);
+	n->getParam("/control/MAX_LATERAL_ACCELERATION",MAX_LATERAL_ACCELERATION);
 	n->getParam("/control/SLOW_DOWN_DISTANCE",SLOW_DOWN_DISTANCE);
+	n->getParam("/control/SLOW_DOWN_PUFFER",SLOW_DOWN_PUFFER);
+	n->getParam("/control/V_FREEDOM",V_FREEDOM);
 	n->getParam("/topic/STELLGROESSEN",STELLGROESSEN_TOPIC);
 	n->getParam("/topic/TRACKING_ERROR",TRACKING_ERROR_TOPIC);
 	n->getParam("/topic/NAVIGATION_INFO",NAVIGATION_INFO_TOPIC);
@@ -21,15 +35,29 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
 	n->getParam("/general/QUEUE_LENGTH",QUEUE_LENGTH );
 	PATH_NAME_EDITED =PATH_NAME + "_teach.txt";
-
-	n_ = n;
-	readPathFromTxt(PATH_NAME_EDITED);
 	//Publisher
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>(STELLGROESSEN_TOPIC, QUEUE_LENGTH);
 	//Subscriber
 	sub_state_ = n_->subscribe(STATE_TOPIC, QUEUE_LENGTH, &MPC::stateCallback,this);
 	distance_to_obstacle_sub_=n_->subscribe(OBSTACLE_DISTANCE_TOPIC, QUEUE_LENGTH ,&MPC::obstacleCallback,this);
 	gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&MPC::guiStopCallback,this);
+
+		//Initialisations.
+		readPathFromTxt(PATH_NAME_EDITED);
+	rest_=0;
+	ref_xy_.clear();
+	steps_in_horizon_=TIME_HORIZON/SAMPLING_TIME;	
+	
+//TEST
+
+/*
+state_.current_arrayposition=815;
+findReferencePoints();
+for(int i=0; i<2*steps_in_horizon_;i++)
+{
+std::cout<<ref_xy_[i]<<std::endl;
+}
+*/
 	std::cout << std::endl << "MPC: Consturctor init, path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
 	pathToVector(); //useful vor Eigen
 	calculateParamFun(d_);
@@ -39,6 +67,8 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 {
 	state_ = *incoming_state;
+	rest_=0;
+	ref_xy_.clear();
 }
 
 void MPC::obstacleCallback(const std_msgs::Float64::ConstPtr& msg)
@@ -52,10 +82,32 @@ void MPC::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
 	BigBen_.start();
 }
 
-float* MPC::findReferencePoints()
-{
-	
+void MPC::findReferencePoints()		//Filling of array for MPC solver
+{	
+	int j_temp;
+	int j=state_.current_arrayposition;
+	float step=1;
+	for(int i=0; i<steps_in_horizon_;i++)
+	{	
+		step=v_ref_[j]*SAMPLING_TIME-rest_;
+		j_temp=indexOfDistanceFront(j,step).x;
+		geometry_msgs::Point global;
+		geometry_msgs::Point local;
+		if(j_temp>=n_poses_path_-1) 
+		{
+			global=path_.poses[n_poses_path_-1].pose.position;
+		}	
+		else
+		{
+			global=pointAtDistanceLinear(j,step);
+		}
+		local=arc_tools::globalToLocal(global, state_);
+		ref_xy_.push_back(local.x);
+		ref_xy_.push_back(local.y);
+		j=j_temp; 
+	}
 }
+
 void MPC::readPathFromTxt(std::string inFileName)
 {
 	// Create an ifstream object.
@@ -109,7 +161,32 @@ void MPC::readPathFromTxt(std::string inFileName)
 		i++;
 	}
 	n_poses_path_ = i;
-	slow_down_index_=indexOfDistanceBack(i-1,SLOW_DOWN_DISTANCE);
+	slow_down_index_=indexOfDistanceBack(i-1,SLOW_DOWN_DISTANCE).x;
+
+	//Calculate reference velocity. new, to implement also on pp
+	v_ref_=teach_vel_;
+	float n=n_poses_path_;
+	for(int i_vel=0;i_vel<n_poses_path_;i_vel++)
+	{
+	    //First calculate physical limit velocity
+		float lad_v= K2_LAD_V + K1_LAD_V*v_abs_;
+		//find reference index for curvature
+		int i_radius=indexOfDistanceFront(i_vel, lad_v).x;
+		if(i_radius>=n_poses_path_) i_radius=n_poses_path_-1;
+		float v_limit=sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i_radius));
+	    //Upper buonds
+		//MAX_ABSOLUTE_VELOCITY
+		float v_bounded=std::min(v_limit,MAX_ABSOLUTE_VELOCITY);
+		v_bounded=std::min(v_bounded,teach_vel_[i_vel]+V_FREEDOM);
+		float C=1;
+	    //Slow down
+		if (i_vel>=slow_down_index_)
+			{
+			//Lineares herrunterschrauben
+			C=C*((distanceIJ(i_vel,n_poses_path_-1))-SLOW_DOWN_PUFFER)/(SLOW_DOWN_DISTANCE-SLOW_DOWN_PUFFER);
+			}
+		v_ref_[i_vel] =std::max(v_bounded * C,float(0));
+	}
 
 }
 
@@ -126,6 +203,7 @@ float MPC::distanceIJ(int from_i , int to_i )
 	return d;
 
 }
+
 
 void MPC::pathToVector()  //Let's see
 {
@@ -163,9 +241,9 @@ void MPC::calculateParamFun(Eigen::MatrixXd a)
 //	}
 }
 
-
-int MPC::indexOfDistanceFront(int i, float d)
+geometry_msgs::Vector3 MPC::indexOfDistanceFront(int i, float d)
 {
+	geometry_msgs::Vector3 vector;	//vector.x= index  vector.z=real distance upper  vector.z=real distance lower 
 	int j=i;
 	float l = 0;
 	while(l<d &&j<n_poses_path_-1)
@@ -176,11 +254,17 @@ int MPC::indexOfDistanceFront(int i, float d)
 		if(j+1>n_poses_path_-1){std::cout<<"MPC: LAUFZEITFEHLER::indexOfDistanceFront"<<std::endl;}
 		j ++;
 	}
-	return j+1;
+	vector.x=j+1;
+	vector.y=l;
+	vector.z=l-sqrt(	pow(path_.poses[j].pose.position.x - path_.poses[j-1].pose.position.x,2)+
+				pow(path_.poses[j].pose.position.y - path_.poses[j-1].pose.position.y,2)+
+				pow(path_.poses[j].pose.position.z - path_.poses[j-1].pose.position.z,2));
+	return vector;
 }
 
-int MPC::indexOfDistanceBack(int i, float d)
+geometry_msgs::Vector3 MPC::indexOfDistanceBack(int i, float d)
 {
+	geometry_msgs::Vector3 vector;	//vector.x= index  vector.z=real distance upper  vector.z=real distance lower 
 	int j=i;
 	float l = 0;
 	while(l<d && j>0)
@@ -191,5 +275,36 @@ int MPC::indexOfDistanceBack(int i, float d)
 		if(j>n_poses_path_-1){std::cout<<"MPC: LAUFZEITFEHLER indexOfDistanceBack"<<std::endl;}
 		j --;
 	}
-	return j;
+	vector.x=j;
+	vector.y=l;
+	vector.z=l-sqrt(	pow(path_.poses[j].pose.position.x - path_.poses[j+1].pose.position.x,2)+
+				pow(path_.poses[j].pose.position.y - path_.poses[j+1].pose.position.y,2)+
+				pow(path_.poses[j].pose.position.z - path_.poses[j+1].pose.position.z,2));
+	return vector;
 }
+
+geometry_msgs::Point MPC::pointAtDistanceLinear(int i, float distance)		//TO TEST
+{
+	geometry_msgs::Point exact_point;
+	geometry_msgs::Vector3 vector=indexOfDistanceFront(i,distance);
+	int index=vector.x;
+	float d_upper=vector.y;
+	float d_lower=vector.z;
+	rest_=d_upper-distance;
+	float lambda=(distance-d_lower)/(d_upper-d_lower);	//lineare interpolation 
+	float dx= path_.poses[index].pose.position.x - path_.poses[index-1].pose.position.x;
+	float dy= path_.poses[index].pose.position.y - path_.poses[index-1].pose.position.y;
+	exact_point.x=path_.poses[index-1].pose.position.x+lambda*dx;
+	exact_point.y=path_.poses[index-1].pose.position.y+lambda*dy;
+	exact_point.z=0;
+	return exact_point;
+}	
+
+float MPC::curveRadius(int i)
+{
+float radius=10;
+return radius;
+}
+
+MPC::~MPC()
+{}
