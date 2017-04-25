@@ -210,7 +210,7 @@ void MPC::pathToMatrix(float lad)  //Let's see
 
 {
 	int i_start = state_.current_arrayposition;
-	int i_end = indexOfDistanceFront(i_start, lad);
+	int i_end = indexOfDistanceFront(i_start, lad).x;
 	Eigen::MatrixXd d(2,n_poses_path_);
 	for (int i=i_start; i<i_end; i++){
 	d(0,i) = path_.poses[i].pose.position.x;
