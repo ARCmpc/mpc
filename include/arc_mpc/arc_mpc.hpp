@@ -31,7 +31,7 @@ public:
 	int indexOfDistanceFront(int i, float d);
 	int indexOfDistanceBack(int i, float d);
 	void calculateParamFun(Eigen::MatrixXd a);
-	void pathToVector();
+	void pathToMatrix(float lad);
 
 	void readPathFromTxt(std::string inFileName);
 
