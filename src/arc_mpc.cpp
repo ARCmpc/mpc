@@ -42,6 +42,7 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 	distance_to_obstacle_sub_=n_->subscribe(OBSTACLE_DISTANCE_TOPIC, QUEUE_LENGTH ,&MPC::obstacleCallback,this);
 	gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&MPC::guiStopCallback,this);
 
+
 		//Initialisations.
 		readPathFromTxt(PATH_NAME_EDITED);
 	rest_=0;
@@ -59,8 +60,8 @@ std::cout<<ref_xy_[i]<<std::endl;
 }
 */
 	std::cout << std::endl << "MPC: Consturctor init, path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
-	pathToVector(); //useful vor Eigen
-	calculateParamFun(d_);
+	//pathToVector(); 
+	//useful vor Eigen
 	
 }
 
@@ -154,7 +155,7 @@ void MPC::readPathFromTxt(std::string inFileName)
 		stream>>path_.poses[j-1].pose.orientation.w;
 		//Save teach_velocity
 		stream>>teach_vel_[j-1];//path_diff_.poses[j-1].pose.position.x;
-						//stream>>path_diff_.poses[j-1].pose.position.y;
+						//stream>>path_diff_.poses[j-1] .pose.position.y;
 						//stream>>path_diff_.poses[j-1].pose.position.z;
 
 		stream.ignore (300, '|');
@@ -205,10 +206,13 @@ float MPC::distanceIJ(int from_i , int to_i )
 }
 
 
-void MPC::pathToVector()  //Let's see
+void MPC::pathToMatrix(float lad)  //Let's see
+
 {
+	int i_start = state_.current_arrayposition;
+	int i_end = indexOfDistanceFront(i_start, lad);
 	Eigen::MatrixXd d(2,n_poses_path_);
-	for (int i=0; i<n_poses_path_; i++){
+	for (int i=i_start; i<i_end; i++){
 	d(0,i) = path_.poses[i].pose.position.x;
 	d(1,i) = path_.poses[i].pose.position.y;	
 }
@@ -217,16 +221,16 @@ void MPC::pathToVector()  //Let's see
 
 void MPC::calculateParamFun(Eigen::MatrixXd a)
 {
-	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(3,3);
-	A << n_poses_path_, d_.row(0).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0)).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0)).sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0).cwiseAbs2()).sum();
+	
+//	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(4,4);
+//	A << n_poses_path_, d_.row(0).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseProduct(d_.row(0)).sum, d_.row(0).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0)).sum(), d_.row(0).c d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0)).sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0).cwiseAbs2()).sum();
 //	std::cout << A << std::endl;
 
-	Eigen::VectorXd rhs(3); 
-	rhs << d_.row(1).sum(), d_.row(1).dot(d_.row(0)), d_.row(1).dot(d_.row(0).cwiseAbs2());
+//	Eigen::VectorXd rhs(3); 
+//	rhs << d_.row(1).sum(), d_.row(1).dot(d_.row(0)), d_.row(1).dot(d_.row(0).cwiseAbs2());
 //	std::cout << rhs << std::endl;
 
-	std::cout << A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs) << std::endl; //!! Nico -> remember to put the coeff as private variables. 
-
+//	std::cout << A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs) << std::endl; //
 
 //	std::cout << d(1,0);
 	//fitting points path_.poses[i].position.x and path_.poses[i].position.y

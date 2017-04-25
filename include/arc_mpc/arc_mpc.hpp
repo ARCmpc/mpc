@@ -34,7 +34,7 @@ public:
 	geometry_msgs::Vector3 indexOfDistanceBack(int i, float d);
 
 	void calculateParamFun(Eigen::MatrixXd a);
-	void pathToVector();
+	void pathToMatrix(float lad);
 
 
 	void readPathFromTxt(std::string inFileName);
