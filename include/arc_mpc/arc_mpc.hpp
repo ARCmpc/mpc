@@ -33,9 +33,9 @@ public:
 	geometry_msgs::Vector3 indexOfDistanceFront(int i, float d);
 	geometry_msgs::Vector3 indexOfDistanceBack(int i, float d);
 
-	void calculateParamFun(Eigen::MatrixXd a);
-	void pathToMatrix(float lad);
-
+	Eigen::Vector4d calculateParamFun(float lad);
+	Eigen::MatrixXd pathToMatrix(float lad);
+	void writeTxt(float lad);
 
 	void readPathFromTxt(std::string inFileName);
 	float curveRadius(int i);

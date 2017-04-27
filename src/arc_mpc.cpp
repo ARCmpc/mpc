@@ -1,5 +1,7 @@
 #include "../include/arc_mpc/arc_mpc.hpp"
 
+using namespace Eigen;
+
 float TIME_HORIZON=10;
 float SAMPLING_TIME=1;
 int QUEUE_LENGTH;
@@ -59,10 +61,17 @@ for(int i=0; i<2*steps_in_horizon_;i++)
 std::cout<<ref_xy_[i]<<std::endl;
 }
 */
+	writeTxt(30);
+	std::cout <<calculateParamFun(30)<<std::endl;
+	std::cout <<indexOfDistanceFront(0,0.01).x<<std::endl;
+
+//	std::cout <<state_.current_arrayposition<<std::endl;
+//	std::cout <<path_.poses[0].pose.position.x<<std::endl;	
+
+//	std::cout <<d_(0,2)<<std::endl;	
 	std::cout << std::endl << "MPC: Consturctor init, path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
 	//pathToVector(); 
 	//useful vor Eigen
-	
 }
 
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
@@ -108,6 +117,7 @@ void MPC::findReferencePoints()		//Filling of array for MPC solver
 		j=j_temp; 
 	}
 }
+
 
 void MPC::readPathFromTxt(std::string inFileName)
 {
@@ -206,37 +216,86 @@ float MPC::distanceIJ(int from_i , int to_i )
 }
 
 
-void MPC::pathToMatrix(float lad)  //Let's see
+Eigen::MatrixXd MPC::pathToMatrix(float lad)  //Let's see
 
 {
 	int i_start = state_.current_arrayposition;
-	//int it = indexOfDistanceFront(5,6.0).x;
-int a = 88;//indexOfDistanceFront(5,6.0).x;
-	Eigen::MatrixXd d(2,n_poses_path_);
-//	for (int i=i_start; i<i_end; i++){
-//	d(0,i) = path_.poses[i].pose.position.x;
-//	d(1,i) = path_.poses[i].pose.position.y;	
-//}
-	Eigen::MatrixXd d_ = d;
+	int i_end = indexOfDistanceFront(i_start, lad).x;
+	Eigen::MatrixXd d(2,i_end-i_start);
+	for (int i=i_start; i<i_end; i++){
+	d(0,i) = path_.poses[i].pose.position.x;
+	d(1,i) = path_.poses[i].pose.position.y;	
+}
+	return d;
 }
 
-void MPC::calculateParamFun(Eigen::MatrixXd a)
+void MPC::writeTxt(float lad)	//write for test
 {
+	std::string blabla;
+	blabla = "ff.txt";
+	int i_start = state_.current_arrayposition;
+	int i_end = indexOfDistanceFront(i_start, lad).x;
+	int lenght = i_end - i_start;
+	std::ofstream stream(blabla.c_str(), std::ios::out);
+	for (int i=0; i<lad; i++)
+	{
+  	stream <<path_.poses[i].pose.position.x<<" "<<
+           path_.poses[i].pose.position.y<<"\r\n";
+	}
 	
-//	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(4,4);
-//	A << n_poses_path_, d_.row(0).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseProduct(d_.row(0)).sum, d_.row(0).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0)).sum(), d_.row(0).c d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0)).sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0).cwiseAbs2()).sum();
-//	std::cout << A << std::endl;
+stream.close();
+}
 
-//	Eigen::VectorXd rhs(3); 
-//	rhs << d_.row(1).sum(), d_.row(1).dot(d_.row(0)), d_.row(1).dot(d_.row(0).cwiseAbs2());
+
+Eigen::Vector4d MPC::calculateParamFun(float lad)
+{
+	Eigen::MatrixXd d_ = pathToMatrix(lad);
+	int i_start = state_.current_arrayposition;
+	int i_end = indexOfDistanceFront(i_start, lad).x;
+	int lenght = i_end - i_start;
+	float sum1 = d_.row(0).sum();
+	float sum2 = d_.row(0).cwiseAbs2().sum();
+	float sum3 = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum3 += pow(d_(0, i), 3.0); 
+	}
+	float sum4 = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum4 += pow(d_(0, i), 4.0); 
+	}
+	float sum5 = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum5 += pow(d_(0, i), 5.0); 
+	}
+	float sum6 = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum6 += pow(d_(0, i), 6.0); 
+	}
+	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(4,4);
+	A << lenght, sum1, sum2, sum3, sum1, sum2, sum3, sum4, sum2, sum3, sum4, sum5, sum3, sum4, sum5, sum6;
+	std::cout << A << std::endl;
+
+	float sum_rhs;
+	for (int i=0; i<lenght; i++)
+	{
+		sum_rhs += pow(d_(0,i), 3.0)*d_(1,i); 
+	}
+
+	Eigen::VectorXd rhs(4); 
+	rhs << d_.row(1).sum(), d_.row(1).dot(d_.row(0)), d_.row(1).dot(d_.row(0).cwiseAbs2()), sum_rhs;
 //	std::cout << rhs << std::endl;
 
-//	std::cout << A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs) << std::endl; //
+	Eigen::Vector4d a = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs);//
+
+	return a;
 
 //	std::cout << d(1,0);
-	//fitting points path_.poses[i].position.x and path_.poses[i].position.y
-//	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(3,3);
-//	A << n, path_.poses[i].pose.position.x.segment(i, n);
+//	fitting points path_.poses[i].position.x and path_.poses[i].position.y
+
 //	
 //	while(l<d &&j<n_poses_path_-1)
 //	{	
