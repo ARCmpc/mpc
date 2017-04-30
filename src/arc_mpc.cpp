@@ -61,9 +61,17 @@ for(int i=0; i<2*steps_in_horizon_;i++)
 std::cout<<ref_xy_[i]<<std::endl;
 }
 */
-	writeTxt(30);
-	std::cout <<calculateParamFun(30)<<std::endl;
-	std::cout <<indexOfDistanceFront(0,0.01).x<<std::endl;
+	state_.current_arrayposition=394;
+	state_.pose.pose.position.x=2.9;
+	state_.pose.pose.position.y=-67;
+	state_.pose.pose.position.z=1.6;
+	state_.pose.pose.orientation.x=-0;	
+	state_.pose.pose.orientation.y=0;
+	state_.pose.pose.orientation.z=0;
+	state_.pose.pose.orientation.w= 1;
+	std::cout<<indexOfDistanceFront(394, 10).x<<std::endl;
+	writeTxt(10);
+	std::cout <<calculateParamFun(10)<<std::endl;
 
 //	std::cout <<state_.current_arrayposition<<std::endl;
 //	std::cout <<path_.poses[0].pose.position.x<<std::endl;	
@@ -222,10 +230,12 @@ Eigen::MatrixXd MPC::pathToMatrix(float lad)  //Let's see
 	int i_start = state_.current_arrayposition;
 	int i_end = indexOfDistanceFront(i_start, lad).x;
 	Eigen::MatrixXd d(2,i_end-i_start);
-	for (int i=i_start; i<i_end; i++){
-	d(0,i) = path_.poses[i].pose.position.x;
-	d(1,i) = path_.poses[i].pose.position.y;	
+	for (int i=0; i<i_end-i_start; i++){
+	geometry_msgs::Point p= arc_tools::globalToLocal(path_.poses[state_.current_arrayposition+i].pose.position, state_);
+	d(0,i) = p.x;
+	d(1,i) = p.y;	
 }
+std::cout<< d<<std::endl;
 	return d;
 }
 
@@ -237,10 +247,12 @@ void MPC::writeTxt(float lad)	//write for test
 	int i_end = indexOfDistanceFront(i_start, lad).x;
 	int lenght = i_end - i_start;
 	std::ofstream stream(blabla.c_str(), std::ios::out);
-	for (int i=0; i<lad; i++)
+	geometry_msgs::Point p;
+	for (int i=i_start; i<i_end; i++)
 	{
-  	stream <<path_.poses[i].pose.position.x<<" "<<
-           path_.poses[i].pose.position.y<<"\r\n";
+	p=arc_tools::globalToLocal(path_.poses[i].pose.position,state_);
+  	stream <<p.x<<" "<<
+           p.y<<"\r\n";
 	}
 	
 stream.close();
@@ -250,6 +262,7 @@ stream.close();
 Eigen::Vector4d MPC::calculateParamFun(float lad)
 {
 	Eigen::MatrixXd d_ = pathToMatrix(lad);
+std::cout<<"ciao"<<std::endl;
 	int i_start = state_.current_arrayposition;
 	int i_end = indexOfDistanceFront(i_start, lad).x;
 	int lenght = i_end - i_start;
@@ -260,16 +273,19 @@ Eigen::Vector4d MPC::calculateParamFun(float lad)
 	{
 		sum3 += pow(d_(0, i), 3.0); 
 	}
+
 	float sum4 = 0;
 	for (int i=0; i<lenght; i++)
 	{
 		sum4 += pow(d_(0, i), 4.0); 
 	}
+
 	float sum5 = 0;
 	for (int i=0; i<lenght; i++)
 	{
 		sum5 += pow(d_(0, i), 5.0); 
 	}
+
 	float sum6 = 0;
 	for (int i=0; i<lenght; i++)
 	{
@@ -279,7 +295,7 @@ Eigen::Vector4d MPC::calculateParamFun(float lad)
 	A << lenght, sum1, sum2, sum3, sum1, sum2, sum3, sum4, sum2, sum3, sum4, sum5, sum3, sum4, sum5, sum6;
 	std::cout << A << std::endl;
 
-	float sum_rhs;
+	float sum_rhs = 0;
 	for (int i=0; i<lenght; i++)
 	{
 		sum_rhs += pow(d_(0,i), 3.0)*d_(1,i); 
