@@ -18,6 +18,7 @@
 #include <sys/time.h>
 #include <algorithm>
 #include <Eigen/Dense>
+#include "../ARC_solver/include/ARC_solver.h"
 
 class MPC{
 
@@ -34,14 +35,25 @@ public:
 	geometry_msgs::Vector3 indexOfDistanceBack(int i, float d);
 
 	void calculateParamFun(Eigen::MatrixXd a);
+<<<<<<< HEAD
+	void pathToVector();
+	float yPoly(float x);
+	float vRef(int index);
+	float vRef(geometry_msgs::Point local, int i_start, int i_end);
+	int localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end);
+	geometry_msgs::Point localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_);
+=======
 	void pathToMatrix(float lad);
 
 
+>>>>>>> 1c49c800cb6bfffeb63b19d24168656df29d91e3
 	void readPathFromTxt(std::string inFileName);
 	float curveRadius(int i);
-	void findReferencePoints();
+	void findReferencePointsLinear();
+	void findReferencePointsPoly();
+	float nextReferenceXPolynomial(float  x_start, float step);
 	geometry_msgs::Point pointAtDistanceLinear(int i, float distance);	//summs up linearly the distance to the points and returns the exact point at certain (summed up) distance
-
+	float linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle);
 private:
 	// 1. ROS setup.
 	ros::NodeHandle* n_;
@@ -56,6 +68,7 @@ private:
 	nav_msgs::Path path_diff_;
 	std::vector<float> teach_vel_;
 	std::vector<float> ref_xy_;
+	std::vector<float> ref_xy_test_;
 	int steps_in_horizon_;
 	// Number of path points.
 	int n_poses_path_;
@@ -78,10 +91,10 @@ private:
 	arc_tools::Clock BigBen_;
 	//
 	std_msgs::Float32MultiArray pure_pursuit_gui_msg_;
-	float rest_;	//rest when getting reference point (point is exact, but for next one you have to start from full integer index and otherwise would lose that distance to the next index you take)
-	//Polynome coeffitients y=poly_a_*x³+poly_b_*x²+poly_c_*x+poly_d
+	float rest_linear_interpolation_;	//rest when getting reference point (point is exact, but for next one you have to start from full integer index and otherwise would lose that distance to the next index you take)
+	//Polynome coeffitients y=poly_a_*x³+poly_b_*x²+poly_c_*x+poly_d_
 	float poly_a_;
-	float ploy_b_;
+	float poly_b_;
 	float poly_c_;
 	float poly_d_;
 };

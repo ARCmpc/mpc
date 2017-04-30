@@ -63,26 +63,7 @@ std::cout<<state_<<std::endl;
 std::cout<<"ciao"<<std::endl;
 //findReferencePointsPoly();
 std::cout<<nextReferenceXPolynomial(0,3)<<std::endl;
-/*for(int i=0; i<2*steps_in_horizon_;i++)
-{
-std::cout<<"with linear "<<ref_xy_[i]<<" with poly "<<ref_xy_test_[i]<<std::endl;
-}
 
-geometry_msgs::Point p;
-p.x=8;
-p.y=-8;
-state_=arc_tools::generate2DState(0,-4, -0.785);
-localPointToPathIndex(p,0,600);
-	std::cout << std::endl << "MPC: Consturctor init, path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
-<<<<<<< HEAD
-//	pathToVector(); //useful vor Eigen
-//	calculateParamFun(d_);
-*/	
-=======
-	//pathToVector(); 
-	//useful vor Eigen
-	
->>>>>>> 1c49c800cb6bfffeb63b19d24168656df29d91e3
 }
 
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
