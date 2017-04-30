@@ -1,5 +1,6 @@
 #include "../include/arc_mpc/arc_mpc.hpp"
-
+//momoentan erster referenzpunkt noch aktueller punkt,  zu korrigieren
+//segmentation fault if polynomial is very wrong (b_poly=1 on gerade...)
 float TIME_HORIZON=10;
 float SAMPLING_TIME=1;
 int QUEUE_LENGTH;
@@ -45,30 +46,49 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 
 		//Initialisations.
 		readPathFromTxt(PATH_NAME_EDITED);
-	rest_=0;
+	rest_linear_interpolation_=0;
 	ref_xy_.clear();
+	ref_xy_test_.clear();
 	steps_in_horizon_=TIME_HORIZON/SAMPLING_TIME;	
 	
 //TEST
 
-/*
-state_.current_arrayposition=815;
-findReferencePoints();
-for(int i=0; i<2*steps_in_horizon_;i++)
+std::cout<<linearInterpolation(100,300,3,7,5.2)<<std::endl;
+state_.current_arrayposition=0;
+state_.pose.pose.orientation.w=1;
+poly_c_=0;
+poly_b_=1;
+std::cout<<state_<<std::endl;
+//findReferencePointsLinear();
+std::cout<<"ciao"<<std::endl;
+//findReferencePointsPoly();
+std::cout<<nextReferenceXPolynomial(0,3)<<std::endl;
+/*for(int i=0; i<2*steps_in_horizon_;i++)
 {
-std::cout<<ref_xy_[i]<<std::endl;
+std::cout<<"with linear "<<ref_xy_[i]<<" with poly "<<ref_xy_test_[i]<<std::endl;
 }
-*/
+
+geometry_msgs::Point p;
+p.x=8;
+p.y=-8;
+state_=arc_tools::generate2DState(0,-4, -0.785);
+localPointToPathIndex(p,0,600);
 	std::cout << std::endl << "MPC: Consturctor init, path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
+<<<<<<< HEAD
+//	pathToVector(); //useful vor Eigen
+//	calculateParamFun(d_);
+*/	
+=======
 	//pathToVector(); 
 	//useful vor Eigen
 	
+>>>>>>> 1c49c800cb6bfffeb63b19d24168656df29d91e3
 }
 
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 {
 	state_ = *incoming_state;
-	rest_=0;
+	rest_linear_interpolation_=0;
 	ref_xy_.clear();
 }
 
@@ -83,14 +103,56 @@ void MPC::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
 	BigBen_.start();
 }
 
-void MPC::findReferencePoints()		//Filling of array for MPC solver
+float MPC::vRef(int index)
+{	
+	return 3;//v_ref_[index];
+}
+
+float MPC::vRef(geometry_msgs::Point local, int i_start, int i_end)
+{
+	int index=localPointToPathIndex(local, i_start, i_end);
+	return 3;//vRef(index);
+}
+void MPC::findReferencePointsPoly()
+{
+	float x_next;
+	float x_curr=0;
+	float v_ref=state_.pose_diff;	//v_ref_[state_.current_];weniger sinn 
+	//Integers there to keep track of position in path. So to read out proper v_ref[].
+	int j_start=state_.current_arrayposition;
+	int j_end;
+	int j_next;		
+	float step;		//Meters to next ref_point
+	geometry_msgs::Point ref_point;
+
+	for(int i=0; i<steps_in_horizon_;i++)		//Where is first ref point?? at actual point or after first Ts?
+	{	
+		step=v_ref*SAMPLING_TIME;
+		x_next= x_curr + step;		//Vorwäts nur entlang x achse 
+		//Save next reference point.
+		ref_point.x = x_next;
+		ref_point.y = yPoly(x_next);
+		ref_xy_test_.push_back(ref_point.x);
+		ref_xy_test_.push_back(ref_point.y);
+		//Find reference velocity at next point.
+		j_end=indexOfDistanceFront(j_start,20).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
+		j_next=localPointToPathIndex(ref_point , j_start , j_end);
+		//v_ref=v_ref_[j_next];
+		v_ref=vRef(ref_point,j_start,j_end);
+		//Actualisation.
+		x_curr=x_next;
+		j_start=j_next;
+	}
+}
+void MPC::findReferencePointsLinear()		//Filling of array for MPC solver
 {	
 	int j_temp;
 	int j=state_.current_arrayposition;
-	float step=1;
-	for(int i=0; i<steps_in_horizon_;i++)
+	float v_ref=state_.pose_diff;			//v_ref_[j]; hat weniger sinn da wir eigentlich eig genau wissen wie schnell wir im ersten punkt fahren
+	float step;
+	for(int i=0; i<steps_in_horizon_;i++)		//Where is first ref point?? at actual point or after first Ts?
 	{	
-		step=v_ref_[j]*SAMPLING_TIME-rest_;
+		step=v_ref*SAMPLING_TIME-rest_linear_interpolation_;
 		j_temp=indexOfDistanceFront(j,step).x;
 		geometry_msgs::Point global;
 		geometry_msgs::Point local;
@@ -106,7 +168,26 @@ void MPC::findReferencePoints()		//Filling of array for MPC solver
 		ref_xy_.push_back(local.x);
 		ref_xy_.push_back(local.y);
 		j=j_temp; 
+		v_ref=vRef(j);		//replace j with localPointToPathIndex(local,j-30,j+30) how to make it independent of running index j (we do not have it with polyfit)
 	}
+}
+
+float MPC::nextReferenceXPolynomial(float x_start, float step)		//interpolates linearly at the end.
+{
+	float x_run=x_start;
+	float x_run_old=x_start;
+	float sum=0;
+	float sum_old=0;
+	float dx=0.1;
+	while (sum<step)
+	{
+		x_run_old=x_run;
+		sum_old=sum;
+		sum+=sqrt(pow(dx,2)+pow(yPoly(x_run)-yPoly(x_run+dx),2));
+		x_run+=dx;
+	}
+	x_run=linearInterpolation( x_run_old, x_run, sum_old, sum, step );
+	return x_run;
 }
 
 void MPC::readPathFromTxt(std::string inFileName)
@@ -294,7 +375,7 @@ geometry_msgs::Point MPC::pointAtDistanceLinear(int i, float distance)		//TO TES
 	int index=vector.x;
 	float d_upper=vector.y;
 	float d_lower=vector.z;
-	rest_=d_upper-distance;
+	rest_linear_interpolation_=d_upper-distance;
 	float lambda=(distance-d_lower)/(d_upper-d_lower);	//lineare interpolation 
 	float dx= path_.poses[index].pose.position.x - path_.poses[index-1].pose.position.x;
 	float dy= path_.poses[index].pose.position.y - path_.poses[index-1].pose.position.y;
@@ -310,5 +391,62 @@ float radius=10;
 return radius;
 }
 
+int MPC::localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end)
+{	
+	geometry_msgs::Point p_global=localToGlobal(p,state_);		//Transformation local to global
+	int j;
+	float distance_old=100;
+	float distance_new;
+	for(int i=i_start; i<i_end;i++)
+	{
+		distance_new=sqrt(	pow((path_.poses[i].pose.position.x-p_global.x),2) 
+					+ 	pow((path_.poses[i].pose.position.y-p_global.y),2));
+		
+		if(distance_new<distance_old)
+		{
+			j=i;
+			distance_old=distance_new;
+			
+		}	
+	}
+	std::cout<<"nearest index: "<<j<<std::endl<<path_.poses[j].pose.position<<std::endl;
+	return j;
+}
+
+geometry_msgs::Point MPC::localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_)
+{	
+std::cout<<"Local point in local coordinate convention "<<p_local<<std::endl; 
+	//Change local coordinates
+	float temp=p_local.x;
+	p_local.x=p_local.y;
+	p_local.y=-temp;
+std::cout<<"Local point in global coordinate convention "<<p_local<<std::endl;  
+	//Rotate              
+	geometry_msgs::Point p_add=arc_tools::rotationLocalToGlobal(p_local,state_);
+std::cout<<"Local point rotated "<<p_add<<std::endl; 
+	geometry_msgs::Point p_global=state_.pose.pose.position;
+	p_global.x+=p_add.x;
+	p_global.y+=p_add.y;
+std::cout<<"Global position "<<p_global<<std::endl;
+	return p_global;
+}
+
+float MPC::yPoly(float x)
+{
+	float y;
+	y=(poly_a_ *x*x*x + poly_b_ *x*x + poly_c_ *x + poly_d_) ;
+	return y;
+}
+
+float MPC::linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle)
+{	
+	if(b_upper == b_lower) 
+	{
+		std::cout<<"Falsch interpoliert \n";
+		return a_lower;
+	}
+	float a_middle =  a_lower + ( b_middle - b_lower ) * ( a_upper - a_lower )/( b_upper - b_lower );
+	return a_middle;
+}
 MPC::~MPC()
 {}
