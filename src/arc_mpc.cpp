@@ -339,10 +339,11 @@ Eigen::MatrixXd MPC::pathToMatrix(float lad)  //Let's see
 {
 	int i_start = state_.current_arrayposition;
 	int i_end=indexOfDistanceFront(i_start, lad).x;
-	Eigen::MatrixXd d(2,n_poses_path_);
-	for (int i=i_start; i<i_end; i++){
-	d(0,i) = path_.poses[i].pose.position.x;
-	d(1,i) = path_.poses[i].pose.position.y;	
+	Eigen::MatrixXd d(2,i_end-i_start);
+	for (int i=0; i<i_end-i_start; i++){
+	geometry_msgs::Point p= arc_tools::globalToLocal(path_.poses[state_.current_arrayposition+i].pose.position, state_);
+	d(0,i) = p.x;
+	d(1,i) = p.y;	
 }
 	return d;
 }
@@ -395,10 +396,10 @@ void MPC::calculateParamFun(float lad_interpolation)
 	Eigen::Vector4d a = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs);//
 	
 
-	float poly_a_ =a(3); 
-	float poly_b_= a(2);
-	float poly_c_= a(1);
-	float poly_d_= a(0);
+	poly_a_ =a(3); 
+	poly_b_= a(2);
+	poly_c_= a(1);
+	poly_d_= a(0);
 	
 }
 
@@ -512,7 +513,7 @@ geometry_msgs::Vector3 MPC::indexOfDistanceFront(int i, float d)
 
 geometry_msgs::Vector3 MPC::indexOfDistanceBack(int i, float d)
 {
-	geometry_msgs::Vector3 vector;	//vector.x= index  vector.z=real distance upper  vector.z=real distance lower 
+	geometry_msgs::Vector3 vector;	//vector.x= index  vector.z=real distance upp er  vector.z=real distance lower 
 	int j=i;
 	float l = 0;
 	while(l<d && j>0)
