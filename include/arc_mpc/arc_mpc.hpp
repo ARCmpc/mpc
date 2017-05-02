@@ -38,6 +38,7 @@ public:
 	Eigen::MatrixXd pathToMatrix(float lad);
 	void writeTxt(float lad); 
 	float yPoly(float x);
+	float radiusPoly(float x);
 	void findReferencePointsLinear();
 	void findReferencePointsPoly();
 	float nextReferenceXPolynomial(float  x_start, float step);

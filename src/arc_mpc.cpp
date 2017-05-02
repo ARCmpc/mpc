@@ -477,6 +477,13 @@ float MPC::yPoly(float x)
 	return y;
 }
 
+float MPC::radiusPoly(float x)
+{
+	float radius;
+	radius=fabs((pow((1+pow(3*poly_a_*x*x+2*poly_b_*x+poly_c_,2)),1.5))/(6*poly_a_*x+2*poly_b_));
+	return radius;
+}
+
 float MPC::linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle)
 {	
 	if(b_upper == b_lower) 
