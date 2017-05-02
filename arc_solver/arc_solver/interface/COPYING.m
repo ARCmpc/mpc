@@ -1,4 +1,4 @@
-% ARC_solver : A fast customized optimization solver.
+% arc_solver : A fast customized optimization solver.
 % 
 % Copyright (C) 2013-2016 EMBOTECH GMBH [info@embotech.com]. All rights reserved.
 % 

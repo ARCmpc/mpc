@@ -1,8 +1,7 @@
 #include "../include/arc_mpc/arc_mpc.hpp"
 //momoentan erster referenzpunkt noch aktueller punkt,  zu korrigieren
 //segmentation fault if polynomial is very wrong (b_poly=1 on gerade...)
-float TIME_HORIZON=10;
-float SAMPLING_TIME=1;
+
 int QUEUE_LENGTH;
 float MAX_LATERAL_ACCELERATION=8;
 float MAX_ABSOLUTE_VELOCITY=10;
@@ -11,6 +10,7 @@ float K2_LAD_V=1;
 float SLOW_DOWN_DISTANCE=10; 
 float SLOW_DOWN_PUFFER=2;
 float V_FREEDOM=0.2;
+float INTERPOLATION_DISTANCE_FRONT=20;
 std::string STELLGROESSEN_TOPIC;
 std::string TRACKING_ERROR_TOPIC;
 std::string NAVIGATION_INFO_TOPIC;
@@ -18,6 +18,13 @@ std::string STATE_TOPIC;
 std::string OBSTACLE_DISTANCE_TOPIC;
 std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
+//Solver constants
+float TIME_HORIZON=10;
+float SAMPLING_TIME=1;
+int N_VAR=6;
+int N_PARAM=3;	//x_ref y_ref v_ref
+int N_STEPS=4;
+int N_INIT=4;
 
 MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 {
@@ -44,55 +51,92 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 	gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&MPC::guiStopCallback,this);
 
 
-		//Initialisations.
-		readPathFromTxt(PATH_NAME_EDITED);
+	//Initialisations.
+	readPathFromTxt(PATH_NAME_EDITED);
 	rest_linear_interpolation_=0;
-	ref_xy_.clear();
-	ref_xy_test_.clear();
-	steps_in_horizon_=TIME_HORIZON/SAMPLING_TIME;	
-	
+	ref_x_.clear();
+	ref_y_.clear();
+	ref_v_.clear();
+	steps_in_horizon_=TIME_HORIZON/SAMPLING_TIME;
+//Interface to casadi
+	/*
+	//#ifdef _cplusplus
+	//extern "C" {
+	//#endif
+	   	extern void arc_solver_casadi2forces(double *x, double *y, double *l, double *p,
+	                                                double *f, double *nabla_f, double *c, double *nabla_c,
+	                                                double *h, double *nabla_h, double *H, int stage);
+	//#ifdef _cplusplus
+	//}
+	//#endif 
+
+	arc_solver_ExtFunc pt2Function = &arc_solver_casadi2forces;
+	*/
 //TEST
-
-std::cout<<linearInterpolation(100,300,3,7,5.2)<<std::endl;
-state_.current_arrayposition=0;
-state_.pose.pose.orientation.w=1;
-poly_c_=0;
-poly_b_=1;
-std::cout<<state_<<std::endl;
-//findReferencePointsLinear();
-std::cout<<"ciao"<<std::endl;
-//findReferencePointsPoly();
-std::cout<<nextReferenceXPolynomial(0,3)<<std::endl;
-
+poly_a_=0;
+poly_b_=0;
+poly_c_=0.2;
+poly_d_=0;
+findReferencePointsPoly();
+setSolverParam();
+for(int i=0;i<N_PARAM*N_STEPS;i++) std::cout<<solver_param_.all_parameters[i]<<std::endl;
+setSolverParam();
+//int ciao=arc_solver_solve(&solver_param_, &solver_output_, &solver_info_,stdout, pt2Function);
+//std::cout<<"int= "<<ciao<<std::endl;
 }
 
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 {
 	state_ = *incoming_state;
 	rest_linear_interpolation_=0;
-	ref_xy_.clear();
+	ref_x_.clear();
+	ref_y_.clear();
+	ref_v_.clear();
+	//LOOP
+	calculateParamFun(INTERPOLATION_DISTANCE_FRONT);
+	findReferencePointsPoly();
+	setSolverParam();
+	getOutputAndReact();
+	//END LOOP
 }
 
 void MPC::obstacleCallback(const std_msgs::Float64::ConstPtr& msg)
 {
 	obstacle_distance_=msg->data;
 }
-
 void MPC::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
 {
 	gui_stop_=msg->data;
 	BigBen_.start();
 }
+void MPC::setSolverParam()	//To test
+{
+	//Reference values	
+	for(int i=0;i<N_STEPS;i++)
+	{
+	solver_param_.all_parameters[i]=ref_x_[i];
+	solver_param_.all_parameters[i+N_STEPS]=ref_y_[i];
+	solver_param_.all_parameters[i+2*N_STEPS]=ref_v_[i];
+	}
 
+	//Booooooo
+	for(int i=0;i<N_STEPS*N_VAR;i++) solver_param_.x0[i]=0;
+
+	//Initial conditions
+	solver_param_.xinit[0]=0;	//initial value x-position(local)
+	solver_param_.xinit[1]=0;	//initial value y-position(local)
+	solver_param_.xinit[2]=v_abs_; 	//initial value velocity.
+	solver_param_.xinit[3]=0;	//initial value orientation (local)
+}
 float MPC::vRef(int index)
 {	
-	return 3;//v_ref_[index];
+	return 2.86;//v_ref_[index];
 }
 
 float MPC::vRef(geometry_msgs::Point local, int i_start, int i_end)
 {
 	int index=localPointToPathIndex(local, i_start, i_end);
-	return 3;//vRef(index);
+	return vRef(index);
 }
 void MPC::findReferencePointsPoly()
 {
@@ -113,13 +157,16 @@ void MPC::findReferencePointsPoly()
 		//Save next reference point.
 		ref_point.x = x_next;
 		ref_point.y = yPoly(x_next);
-		ref_xy_test_.push_back(ref_point.x);
-		ref_xy_test_.push_back(ref_point.y);
+		ref_x_.push_back(ref_point.x);
+		ref_y_.push_back(ref_point.y);
 		//Find reference velocity at next point.
 		j_end=indexOfDistanceFront(j_start,20).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
 		j_next=localPointToPathIndex(ref_point , j_start , j_end);
 		//v_ref=v_ref_[j_next];
 		v_ref=vRef(ref_point,j_start,j_end);
+
+		ref_v_.push_back(v_ref);
+
 		//Actualisation.
 		x_curr=x_next;
 		j_start=j_next;
@@ -146,10 +193,11 @@ void MPC::findReferencePointsLinear()		//Filling of array for MPC solver
 			global=pointAtDistanceLinear(j,step);
 		}
 		local=arc_tools::globalToLocal(global, state_);
-		ref_xy_.push_back(local.x);
-		ref_xy_.push_back(local.y);
+		ref_x_.push_back(local.x);
+		ref_y_.push_back(local.y);
 		j=j_temp; 
-		v_ref=vRef(j);		//replace j with localPointToPathIndex(local,j-30,j+30) how to make it independent of running index j (we do not have it with polyfit)
+		v_ref=vRef(j);
+		ref_v_.push_back(v_ref);
 	}
 }
 
@@ -268,108 +316,47 @@ float MPC::distanceIJ(int from_i , int to_i )
 }
 
 
-void MPC::pathToMatrix(float lad)  //Let's see
+Eigen::MatrixXd MPC::pathToMatrix(float lad)  //Let's see
 
 {
 	int i_start = state_.current_arrayposition;
-	int i_end = indexOfDistanceFront(i_start, lad);
+	int i_end=indexOfDistanceFront(i_start, lad).x;
 	Eigen::MatrixXd d(2,n_poses_path_);
 	for (int i=i_start; i<i_end; i++){
 	d(0,i) = path_.poses[i].pose.position.x;
 	d(1,i) = path_.poses[i].pose.position.y;	
 }
-	Eigen::MatrixXd d_ = d;
+	return d;
 }
 
-void MPC::calculateParamFun(Eigen::MatrixXd a)
+void MPC::calculateParamFun(float lad_interpolation)
 {
+	Eigen::MatrixXd d=pathToMatrix(lad_interpolation);
+}
+void MPC::getOutputAndReact()
+{
+	int flag=1;//solverFunc(blablabla)
+	if(flag==1)
+	{
+	//Set inputs
 	
-//	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(4,4);
-//	A << n_poses_path_, d_.row(0).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseProduct(d_.row(0)).sum, d_.row(0).sum(), d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0)).sum(), d_.row(0).c d_.row(0).cwiseAbs2().sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0)).sum(), d_.row(0).cwiseAbs2().cwiseProduct(d_.row(0).cwiseAbs2()).sum();
-//	std::cout << A << std::endl;
-
-//	Eigen::VectorXd rhs(3); 
-//	rhs << d_.row(1).sum(), d_.row(1).dot(d_.row(0)), d_.row(1).dot(d_.row(0).cwiseAbs2());
-//	std::cout << rhs << std::endl;
-
-//	std::cout << A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs) << std::endl; //
-
-//	std::cout << d(1,0);
-	//fitting points path_.poses[i].position.x and path_.poses[i].position.y
-//	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(3,3);
-//	A << n, path_.poses[i].pose.position.x.segment(i, n);
-//	
-//	while(l<d &&j<n_poses_path_-1)
-//	{	
-//	
-//	indexOfDistanceFront(j-1, 4); example with distance 4 meters
-//	
-//	}
-}
-
-geometry_msgs::Vector3 MPC::indexOfDistanceFront(int i, float d)
-{
-	geometry_msgs::Vector3 vector;	//vector.x= index  vector.z=real distance upper  vector.z=real distance lower 
-	int j=i;
-	float l = 0;
-	while(l<d &&j<n_poses_path_-1)
-	{
-		l += sqrt(	pow(path_.poses[j+1].pose.position.x - path_.poses[j].pose.position.x,2)+
-				pow(path_.poses[j+1].pose.position.y - path_.poses[j].pose.position.y,2)+
-				pow(path_.poses[j+1].pose.position.z - path_.poses[j].pose.position.z,2));
-		if(j+1>n_poses_path_-1){std::cout<<"MPC: LAUFZEITFEHLER::indexOfDistanceFront"<<std::endl;}
-		j ++;
 	}
-	vector.x=j+1;
-	vector.y=l;
-	vector.z=l-sqrt(	pow(path_.poses[j].pose.position.x - path_.poses[j-1].pose.position.x,2)+
-				pow(path_.poses[j].pose.position.y - path_.poses[j-1].pose.position.y,2)+
-				pow(path_.poses[j].pose.position.z - path_.poses[j-1].pose.position.z,2));
-	return vector;
-}
-
-geometry_msgs::Vector3 MPC::indexOfDistanceBack(int i, float d)
-{
-	geometry_msgs::Vector3 vector;	//vector.x= index  vector.z=real distance upper  vector.z=real distance lower 
-	int j=i;
-	float l = 0;
-	while(l<d && j>0)
+	else if(flag==0)
 	{
-		l += sqrt(	pow(path_.poses[j-1].pose.position.x - path_.poses[j].pose.position.x,2)+
-				pow(path_.poses[j-1].pose.position.y - path_.poses[j].pose.position.y,2)+
-				pow(path_.poses[j-1].pose.position.z - path_.poses[j].pose.position.z,2));
-		if(j>n_poses_path_-1){std::cout<<"MPC: LAUFZEITFEHLER indexOfDistanceBack"<<std::endl;}
-		j --;
+	std::cout<<"Timeout"<<std::endl;
 	}
-	vector.x=j;
-	vector.y=l;
-	vector.z=l-sqrt(	pow(path_.poses[j].pose.position.x - path_.poses[j+1].pose.position.x,2)+
-				pow(path_.poses[j].pose.position.y - path_.poses[j+1].pose.position.y,2)+
-				pow(path_.poses[j].pose.position.z - path_.poses[j+1].pose.position.z,2));
-	return vector;
-}
-
-geometry_msgs::Point MPC::pointAtDistanceLinear(int i, float distance)		//TO TEST
-{
-	geometry_msgs::Point exact_point;
-	geometry_msgs::Vector3 vector=indexOfDistanceFront(i,distance);
-	int index=vector.x;
-	float d_upper=vector.y;
-	float d_lower=vector.z;
-	rest_linear_interpolation_=d_upper-distance;
-	float lambda=(distance-d_lower)/(d_upper-d_lower);	//lineare interpolation 
-	float dx= path_.poses[index].pose.position.x - path_.poses[index-1].pose.position.x;
-	float dy= path_.poses[index].pose.position.y - path_.poses[index-1].pose.position.y;
-	exact_point.x=path_.poses[index-1].pose.position.x+lambda*dx;
-	exact_point.y=path_.poses[index-1].pose.position.y+lambda*dy;
-	exact_point.z=0;
-	return exact_point;
-}	
-
-float MPC::curveRadius(int i)
-{
-float radius=10;
-return radius;
+	else if(flag==-6)
+	{
+	std::cout<<"NAN or inf occured"<<std::endl;
+	}
+	else if(flag==-7)
+	{
+	std::cout<<"Infeasible"<<std::endl;
+	}
+	else if(flag==-100)
+	{
+	std::cout<<"Licence error"<<std::endl;
+	}
 }
 
 int MPC::localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end)
@@ -430,4 +417,70 @@ float MPC::linearInterpolation(float a_lower, float a_upper ,float b_lower, floa
 	return a_middle;
 }
 MPC::~MPC()
-{}
+{
+}
+geometry_msgs::Vector3 MPC::indexOfDistanceFront(int i, float d)
+{
+	geometry_msgs::Vector3 vector;	//vector.x= index  vector.z=real distance upper  vector.z=real distance lower 
+	int j=i;
+	float l = 0;
+	while(l<d &&j<n_poses_path_-1)
+	{
+		l += sqrt(	pow(path_.poses[j+1].pose.position.x - path_.poses[j].pose.position.x,2)+
+				pow(path_.poses[j+1].pose.position.y - path_.poses[j].pose.position.y,2)+
+				pow(path_.poses[j+1].pose.position.z - path_.poses[j].pose.position.z,2));
+		if(j+1>n_poses_path_-1){std::cout<<"MPC: LAUFZEITFEHLER::indexOfDistanceFront"<<std::endl;}
+		j ++;
+	}
+	vector.x=j+1;
+	vector.y=l;
+	vector.z=l-sqrt(	pow(path_.poses[j].pose.position.x - path_.poses[j-1].pose.position.x,2)+
+				pow(path_.poses[j].pose.position.y - path_.poses[j-1].pose.position.y,2)+
+				pow(path_.poses[j].pose.position.z - path_.poses[j-1].pose.position.z,2));
+	return vector;
+}
+
+geometry_msgs::Vector3 MPC::indexOfDistanceBack(int i, float d)
+{
+	geometry_msgs::Vector3 vector;	//vector.x= index  vector.z=real distance upper  vector.z=real distance lower 
+	int j=i;
+	float l = 0;
+	while(l<d && j>0)
+	{
+		l += sqrt(	pow(path_.poses[j-1].pose.position.x - path_.poses[j].pose.position.x,2)+
+				pow(path_.poses[j-1].pose.position.y - path_.poses[j].pose.position.y,2)+
+				pow(path_.poses[j-1].pose.position.z - path_.poses[j].pose.position.z,2));
+		if(j>n_poses_path_-1){std::cout<<"MPC: LAUFZEITFEHLER indexOfDistanceBack"<<std::endl;}
+		j --;
+	}
+	vector.x=j;
+	vector.y=l;
+	vector.z=l-sqrt(	pow(path_.poses[j].pose.position.x - path_.poses[j+1].pose.position.x,2)+
+				pow(path_.poses[j].pose.position.y - path_.poses[j+1].pose.position.y,2)+
+				pow(path_.poses[j].pose.position.z - path_.poses[j+1].pose.position.z,2));
+	return vector;
+}
+
+geometry_msgs::Point MPC::pointAtDistanceLinear(int i, float distance)
+{
+	geometry_msgs::Point exact_point;
+	geometry_msgs::Vector3 vector=indexOfDistanceFront(i,distance);
+	int index=vector.x;
+	float d_upper=vector.y;
+	float d_lower=vector.z;
+	rest_linear_interpolation_=d_upper-distance;
+	float lambda=(distance-d_lower)/(d_upper-d_lower);	//lineare interpolation 
+	float dx= path_.poses[index].pose.position.x - path_.poses[index-1].pose.position.x;
+	float dy= path_.poses[index].pose.position.y - path_.poses[index-1].pose.position.y;
+	exact_point.x=path_.poses[index-1].pose.position.x+lambda*dx;
+	exact_point.y=path_.poses[index-1].pose.position.y+lambda*dy;
+	exact_point.z=0;
+	return exact_point;
+}	
+
+float MPC::curveRadius(int i)
+{
+float radius=10;
+return radius;
+}
+
