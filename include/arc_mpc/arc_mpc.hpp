@@ -36,6 +36,7 @@ public:
 
 	void calculateParamFun(float lad_interpolation);
 	Eigen::MatrixXd pathToMatrix(float lad);
+	void writeTxt(float lad); 
 	float yPoly(float x);
 	void findReferencePointsLinear();
 	void findReferencePointsPoly();

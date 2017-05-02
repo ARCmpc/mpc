@@ -315,6 +315,24 @@ float MPC::distanceIJ(int from_i , int to_i )
 
 }
 
+void MPC::writeTxt(float lad)	//write for test
+{
+	std::string blabla;
+	blabla = "ff.txt";
+	int i_start = state_.current_arrayposition;
+	int i_end = indexOfDistanceFront(i_start, lad).x;
+	int lenght = i_end - i_start;
+	std::ofstream stream(blabla.c_str(), std::ios::out);
+	geometry_msgs::Point p;
+	for (int i=i_start; i<i_end; i++)
+	{
+	p=arc_tools::globalToLocal(path_.poses[i].pose.position,state_);
+  	stream <<p.x<<" "<<
+           p.y<<"\r\n";
+	}
+	
+stream.close();
+}
 
 Eigen::MatrixXd MPC::pathToMatrix(float lad)  //Let's see
 
@@ -332,7 +350,59 @@ Eigen::MatrixXd MPC::pathToMatrix(float lad)  //Let's see
 void MPC::calculateParamFun(float lad_interpolation)
 {
 	Eigen::MatrixXd d=pathToMatrix(lad_interpolation);
+	int i_start = state_.current_arrayposition;
+	int i_end = indexOfDistanceFront(i_start, lad_interpolation).x;
+	int lenght = i_end - i_start;
+	float sum1 = d_.row(0).sum();
+	float sum2 = d_.row(0).cwiseAbs2().sum();
+	float sum3 = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum3 += pow(d_(0, i), 3.0); 
+	}
+
+	float sum4 = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum4 += pow(d_(0, i), 4.0); 
+	}
+
+	float sum5 = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum5 += pow(d_(0, i), 5.0); 
+	}
+
+	float sum6 = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum6 += pow(d_(0, i), 6.0); 
+	}
+	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(4,4);
+	A << lenght, sum1, sum2, sum3, sum1, sum2, sum3, sum4, sum2, sum3, sum4, sum5, sum3, sum4, sum5, sum6;
+	std::cout << A << std::endl;
+
+	float sum_rhs = 0;
+	for (int i=0; i<lenght; i++)
+	{
+		sum_rhs += pow(d_(0,i), 3.0)*d_(1,i); 
+	}
+
+	Eigen::VectorXd rhs(4); 
+	rhs << d_.row(1).sum(), d_.row(1).dot(d_.row(0)), d_.row(1).dot(d_.row(0).cwiseAbs2()), sum_rhs;
+//	std::cout << rhs << std::endl;
+
+	Eigen::Vector4d a = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs);//
+	
+
+	float poly_a_ =a(3); 
+	float poly_b_= a(2);
+	float poly_c_= a(1);
+	float poly_d_= a(0);
+	
 }
+
+
 void MPC::getOutputAndReact()
 {
 	int flag=1;//solverFunc(blablabla)
