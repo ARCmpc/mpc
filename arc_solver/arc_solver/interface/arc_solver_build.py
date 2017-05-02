@@ -1,4 +1,4 @@
-#ARC_solver : A fast customized optimization solver.
+#arc_solver : A fast customized optimization solver.
 #
 #Copyright (C) 2013-2016 EMBOTECH GMBH [info@embotech.com]. All rights reserved.
 #
@@ -30,22 +30,22 @@ import sys
 import distutils
 
 # determine source file
-sourcefile = os.path.join(os.getcwd(),"ARC_solver","src","ARC_solver"+".c")
+sourcefile = os.path.join(os.getcwd(),"arc_solver","src","arc_solver"+".c")
 
 # determine lib file
 if sys.platform.startswith('win'):
-	libfile = os.path.join(os.getcwd(),"ARC_solver","lib","ARC_solver"+".lib")
+	libfile = os.path.join(os.getcwd(),"arc_solver","lib","arc_solver"+".lib")
 else:
-	libfile = os.path.join(os.getcwd(),"ARC_solver","lib","ARC_solver"+".so")	
+	libfile = os.path.join(os.getcwd(),"arc_solver","lib","arc_solver"+".so")	
 
 # create lib dir if it does not exist yet
-if not os.path.exists(os.path.join(os.getcwd(),"ARC_solver","lib")):
-	os.makedirs(os.path.join(os.getcwd(),"ARC_solver","lib"))
+if not os.path.exists(os.path.join(os.getcwd(),"arc_solver","lib")):
+	os.makedirs(os.path.join(os.getcwd(),"arc_solver","lib"))
 								
 
 				
 # compile into object file
-objdir = os.path.join(os.getcwd(),"ARC_solver","obj")
+objdir = os.path.join(os.getcwd(),"arc_solver","obj")
 if isinstance(c,distutils.unixccompiler.UnixCCompiler):
 	objects = c.compile([sourcefile], output_dir=objdir, extra_preargs=['-O3','-fPIC','-fopenmp','-mavx'])
 	if sys.platform.startswith('linux'):
@@ -55,7 +55,7 @@ else:
 
 				
 # create libraries
-libdir = os.path.join(os.getcwd(),"ARC_solver","lib")
-exportsymbols = ["%s_solve" % "ARC_solver"]
-c.create_static_lib(objects, "ARC_solver", output_dir=libdir)
-c.link_shared_lib(objects, "ARC_solver", output_dir=libdir, export_symbols=exportsymbols)
+libdir = os.path.join(os.getcwd(),"arc_solver","lib")
+exportsymbols = ["%s_solve" % "arc_solver"]
+c.create_static_lib(objects, "arc_solver", output_dir=libdir)
+c.link_shared_lib(objects, "arc_solver", output_dir=libdir, export_symbols=exportsymbols)

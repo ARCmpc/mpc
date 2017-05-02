@@ -18,7 +18,7 @@
 #include <sys/time.h>
 #include <algorithm>
 #include <Eigen/Dense>
-#include "../ARC_solver/include/ARC_solver.h"
+#include "../arc_solver/arc_solver/include/arc_solver.h"
 
 class MPC{
 
@@ -34,26 +34,25 @@ public:
 	geometry_msgs::Vector3 indexOfDistanceFront(int i, float d);
 	geometry_msgs::Vector3 indexOfDistanceBack(int i, float d);
 
-	void calculateParamFun(Eigen::MatrixXd a);
-<<<<<<< HEAD
-	void pathToVector();
+	void calculateParamFun(float lad_interpolation);
+	Eigen::MatrixXd pathToMatrix(float lad);
 	float yPoly(float x);
-	float vRef(int index);
-	float vRef(geometry_msgs::Point local, int i_start, int i_end);
-	int localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end);
-	geometry_msgs::Point localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_);
-=======
-	void pathToMatrix(float lad);
-
-
->>>>>>> 1c49c800cb6bfffeb63b19d24168656df29d91e3
-	void readPathFromTxt(std::string inFileName);
-	float curveRadius(int i);
 	void findReferencePointsLinear();
 	void findReferencePointsPoly();
 	float nextReferenceXPolynomial(float  x_start, float step);
+	void setSolverParam();
+	void getOutputAndReact();
+	float vRef(int index);
+	float vRef(geometry_msgs::Point local, int i_start, int i_end);
+	int localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end);
+	void readPathFromTxt(std::string inFileName);
+	float curveRadius(int i);
+
+	geometry_msgs::Point localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_);
 	geometry_msgs::Point pointAtDistanceLinear(int i, float distance);	//summs up linearly the distance to the points and returns the exact point at certain (summed up) distance
 	float linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle);
+
+	
 private:
 	// 1. ROS setup.
 	ros::NodeHandle* n_;
@@ -67,8 +66,9 @@ private:
 	nav_msgs::Path path_;
 	nav_msgs::Path path_diff_;
 	std::vector<float> teach_vel_;
-	std::vector<float> ref_xy_;
-	std::vector<float> ref_xy_test_;
+	std::vector<float> ref_x_;
+	std::vector<float> ref_y_;
+	std::vector<float> ref_v_;
 	int steps_in_horizon_;
 	// Number of path points.
 	int n_poses_path_;
@@ -97,4 +97,11 @@ private:
 	float poly_b_;
 	float poly_c_;
 	float poly_d_;
+	//Solver
+	arc_solver_params solver_param_;
+	arc_solver_output solver_output_;
+	arc_solver_info solver_info_;
+	FILE fs_;
+	arc_solver_ExtFunc arc_solver_evalExtFunctions_;
+
 };
