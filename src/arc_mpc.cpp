@@ -128,15 +128,22 @@ void MPC::setSolverParam()	//To test
 	solver_param_.xinit[2]=v_abs_; 	//initial value velocity.
 	solver_param_.xinit[3]=0;	//initial value orientation (local)
 }
-float MPC::vRef(int index)
+float MPC::vRef(int index)	//For the moment const=3
 {	
-	return 2.86;//v_ref_[index];
+//	return v_ref_[index];
+return 3;
 }
 
-float MPC::vRef(geometry_msgs::Point local, int i_start, int i_end)
-{
+float MPC::vRef(geometry_msgs::Point local, int i_start, int i_end)	//For the moment const=3
+{	
+	//Physical limit
+	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*radiusPoly(local.x));
 	int index=localPointToPathIndex(local, i_start, i_end);
-	return vRef(index);
+	float v_a_priori=v_ref_[index];
+	float v_ref=std::min(v_a_priori,v_limit);	
+	std::cout<<"Vpriori "<<v_a_priori<<" v_limit "<<v_limit<<" v_ref final "<<v_ref<<std::endl;
+//	return v_ref;
+return 3;
 }
 void MPC::findReferencePointsPoly()
 {
