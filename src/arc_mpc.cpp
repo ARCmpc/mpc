@@ -11,6 +11,9 @@ float SLOW_DOWN_DISTANCE=10;
 float SLOW_DOWN_PUFFER=2;
 float V_FREEDOM=0.2;
 float INTERPOLATION_DISTANCE_FRONT=20;
+float OBSTACLE_SLOW_DOWN_DISTANCE;
+float OBSTACLE_PUFFER_DISTANCE;
+float SHUT_DOWN_TIME;
 std::string STELLGROESSEN_TOPIC;
 std::string TRACKING_ERROR_TOPIC;
 std::string NAVIGATION_INFO_TOPIC;
@@ -29,6 +32,9 @@ int N_INIT=4;
 MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 {
 	n_ = n;
+	n->getParam("/control/OBSTACLE_SLOW_DOWN_DISTANCE",OBSTACLE_SLOW_DOWN_DISTANCE);
+	n->getParam("/control/OBSTACLE_PUFFER_DISTANCE",OBSTACLE_PUFFER_DISTANCE);
+	n->getParam("/control/SHUT_DOWN_TIME",SHUT_DOWN_TIME);
 	n->getParam("/control/K1_LAD_V",K1_LAD_V);
 	n->getParam("/control/K2_LAD_V",K2_LAD_V);
 	n->getParam("/control/MAX_LATERAL_ACCELERATION",MAX_LATERAL_ACCELERATION);
@@ -54,6 +60,8 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 	//Initialisations.
 	readPathFromTxt(PATH_NAME_EDITED);
 	rest_linear_interpolation_=0;
+	obstacle_distance_=100;
+	gui_stop_=0;
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
@@ -79,7 +87,7 @@ poly_b_=0;
 poly_c_=0.2;
 poly_d_=0;
 findReferencePointsPoly();
-for(int i=0;i<8;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
+for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
 setSolverParam();
 for (int i=0;i<27;i++) std::cout<<"all_param "<<i<<": "<<solver_param_.all_parameters[i]<<std::endl;
 int ciao=arc_solver_solve(&solver_param_, &solver_output_, &solver_info_,stdout, pt2Function);
@@ -185,12 +193,13 @@ void MPC::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
 }
 void MPC::setSolverParam()	//To test
 {
-	//Reference values	
-	for(int i=0;i<N_PARAM*N_STEPS;i+=N_PARAM)
+	//Reference values
+	int j=0;	
+	for(int i=0;i<N_PARAM*N_STEPS;i+=N_PARAM, j++)
 	{
-	solver_param_.all_parameters[i]=ref_x_[i];
-	solver_param_.all_parameters[i+1]=ref_y_[i];
-	solver_param_.all_parameters[i+2]=ref_v_[i];
+	solver_param_.all_parameters[i]=ref_x_[j];
+	solver_param_.all_parameters[i+1]=ref_y_[j];
+	solver_param_.all_parameters[i+2]=ref_v_[j];
 	}
 
 	//Booooooo
@@ -208,6 +217,26 @@ float MPC::vRef(int index)	//For the moment const=3
 	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*radiusPoly(local.x));	
 	float v_a_priori=v_ref_[index];
 	float v_ref=std::min(v_a_priori,v_limit);	
+	//Penalisation
+	float C=1;
+	//Obstacle slow down
+	if(obstacle_distance_<OBSTACLE_SLOW_DOWN_DISTANCE) std::cout<<OBSTACLE_SLOW_DOWN_DISTANCE<<" PURE PURSUIT; Slow down for obstacle"<<std::endl;
+	obstacle_distance_=std::max(obstacle_distance_,OBSTACLE_PUFFER_DISTANCE);
+	obstacle_distance_=std::min(obstacle_distance_,OBSTACLE_SLOW_DOWN_DISTANCE);
+	C=C * (obstacle_distance_ - OBSTACLE_PUFFER_DISTANCE) / (OBSTACLE_SLOW_DOWN_DISTANCE - OBSTACLE_PUFFER_DISTANCE);
+	//Shutdown
+	if(gui_stop_==1&&BigBen_.getTimeFromStart()<=SHUT_DOWN_TIME)//&& time zwischen 0 und pi/2
+		{
+		std::cout<<"PURE PURSUIT: Shutting down gradually"<<std::endl;
+		C=C*cos(BigBen_.getTimeFromStart()*1.57079632679/(SHUT_DOWN_TIME));	//Zähler ist PI/2.
+		}
+	else if (gui_stop_==1 && BigBen_.getTimeFromStart()>SHUT_DOWN_TIME)
+		{
+		std::cout<<"PURE PURSUIT: Shutted down"<<std::endl;
+		C=0;
+		}
+	
+	v_ref*=C;
 	return v_ref;
 }
 
@@ -218,6 +247,26 @@ float MPC::vRef(geometry_msgs::Point local, int i_start, int i_end)	//For the mo
 	int index=localPointToPathIndex(local, i_start, i_end);
 	float v_a_priori=v_ref_[index];
 	float v_ref=std::min(v_a_priori,v_limit);	
+	//Penalisation
+	float C=1;
+	//Obstacle slow down
+	if(obstacle_distance_<OBSTACLE_SLOW_DOWN_DISTANCE) std::cout<<OBSTACLE_SLOW_DOWN_DISTANCE<<" PURE PURSUIT; Slow down for obstacle"<<std::endl;
+	obstacle_distance_=std::max(obstacle_distance_,OBSTACLE_PUFFER_DISTANCE);
+	obstacle_distance_=std::min(obstacle_distance_,OBSTACLE_SLOW_DOWN_DISTANCE);
+	C=C * (obstacle_distance_ - OBSTACLE_PUFFER_DISTANCE) / (OBSTACLE_SLOW_DOWN_DISTANCE - OBSTACLE_PUFFER_DISTANCE);
+	//Shutdown
+	if(gui_stop_==1&&BigBen_.getTimeFromStart()<=SHUT_DOWN_TIME)//&& time zwischen 0 und pi/2
+		{
+		std::cout<<"PURE PURSUIT: Shutting down gradually"<<std::endl;
+		C=C*cos(BigBen_.getTimeFromStart()*1.57079632679/(SHUT_DOWN_TIME));	//Zähler ist PI/2.
+		}
+	else if (gui_stop_==1 && BigBen_.getTimeFromStart()>SHUT_DOWN_TIME)
+		{
+		std::cout<<"PURE PURSUIT: Shutted down"<<std::endl;
+		C=0;
+		}
+	
+	v_ref*=C;
 std::cout<<"Vpriori "<<v_a_priori<<" v_limit "<<v_limit<<" v_ref final "<<v_ref<<std::endl;
 	return v_ref;
 }
