@@ -86,6 +86,7 @@ poly_a_=0;
 poly_b_=0;
 poly_c_=0.2;
 poly_d_=0;
+calculateParamFun(10);
 findReferencePointsPoly();
 for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
 setSolverParam();
@@ -164,7 +165,7 @@ std::cout<<"output6 "<<solver_output_.x8[6]<<std::endl;
 std::cout<<"output6 "<<solver_output_.x9[6]<<std::endl;
 std::cout<<std::endl;
 //PLOT
-
+std::cout<<poly_a_<<" "<<poly_b_<<" "<<poly_c_<<" "<<poly_d_<<std::endl;
 }
 
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
@@ -480,30 +481,30 @@ void MPC::calculateParamFun(float lad_interpolation)
 	int i_start = state_.current_arrayposition;
 	int i_end = indexOfDistanceFront(i_start, lad_interpolation).x;
 	int lenght = i_end - i_start;
-	float sum1 = d_.row(0).sum();
-	float sum2 = d_.row(0).cwiseAbs2().sum();
+	float sum1 = d.row(0).sum();
+	float sum2 = d.row(0).cwiseAbs2().sum();
 	float sum3 = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum3 += pow(d_(0, i), 3.0); 
+		sum3 += pow(d(0, i), 3.0); 
 	}
 
 	float sum4 = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum4 += pow(d_(0, i), 4.0); 
+		sum4 += pow(d(0, i), 4.0); 
 	}
 
 	float sum5 = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum5 += pow(d_(0, i), 5.0); 
+		sum5 += pow(d(0, i), 5.0); 
 	}
 
 	float sum6 = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum6 += pow(d_(0, i), 6.0); 
+		sum6 += pow(d(0, i), 6.0); 
 	}
 	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(4,4);
 	A << lenght, sum1, sum2, sum3, sum1, sum2, sum3, sum4, sum2, sum3, sum4, sum5, sum3, sum4, sum5, sum6;
@@ -512,11 +513,11 @@ void MPC::calculateParamFun(float lad_interpolation)
 	float sum_rhs = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum_rhs += pow(d_(0,i), 3.0)*d_(1,i); 
+		sum_rhs += pow(d(0,i), 3.0)*d(1,i); 
 	}
 
 	Eigen::VectorXd rhs(4); 
-	rhs << d_.row(1).sum(), d_.row(1).dot(d_.row(0)), d_.row(1).dot(d_.row(0).cwiseAbs2()), sum_rhs;
+	rhs << d.row(1).sum(), d.row(1).dot(d.row(0)), d.row(1).dot(d.row(0).cwiseAbs2()), sum_rhs;
 //	std::cout << rhs << std::endl;
 
 	Eigen::Vector4d a = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs);//
