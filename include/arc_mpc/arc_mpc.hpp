@@ -33,8 +33,8 @@ public:
 	geometry_msgs::Vector3 indexOfDistanceFront(int i, float d);
 	geometry_msgs::Vector3 indexOfDistanceBack(int i, float d);
 
-	Eigen::Vector4d calculateParamFun(float lad);
-	Eigen::MatrixXd pathToMatrix(float lad);
+	void calculateParamFun(float lad_interpolation);
+	void pathToMatrix(float lad_interpolation);
 	void writeTxt(float lad);
 
 	void readPathFromTxt(std::string inFileName);
