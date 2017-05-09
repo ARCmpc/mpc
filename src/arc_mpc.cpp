@@ -259,66 +259,58 @@ stream.close();
 }
 
 
-Eigen::Vector4d MPC::calculateParamFun(float lad)
+void MPC::calculateParamFun(float lad_interpolation)
 {
-	Eigen::MatrixXd d_ = pathToMatrix(lad);
-std::cout<<"ciao"<<std::endl;
+	Eigen::MatrixXd d=pathToMatrix(lad_interpolation);
 	int i_start = state_.current_arrayposition;
-	int i_end = indexOfDistanceFront(i_start, lad).x;
+	int i_end = indexOfDistanceFront(i_start, lad_interpolation).x;
 	int lenght = i_end - i_start;
-	float sum1 = d_.row(0).sum();
-	float sum2 = d_.row(0).cwiseAbs2().sum();
+	float sum1 = d.row(0).sum();
+	float sum2 = d.row(0).cwiseAbs2().sum();
 	float sum3 = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum3 += pow(d_(0, i), 3.0); 
+		sum3 += pow(d(0, i), 3.0); 
 	}
 
 	float sum4 = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum4 += pow(d_(0, i), 4.0); 
+		sum4 += pow(d(0, i), 4.0); 
 	}
 
 	float sum5 = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum5 += pow(d_(0, i), 5.0); 
+		sum5 += pow(d(0, i), 5.0); 
 	}
 
 	float sum6 = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum6 += pow(d_(0, i), 6.0); 
+		sum6 += pow(d(0, i), 6.0); 
 	}
 	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(4,4);
 	A << lenght, sum1, sum2, sum3, sum1, sum2, sum3, sum4, sum2, sum3, sum4, sum5, sum3, sum4, sum5, sum6;
-	std::cout << A << std::endl;
+//	std::cout << A << std::endl;
 
 	float sum_rhs = 0;
 	for (int i=0; i<lenght; i++)
 	{
-		sum_rhs += pow(d_(0,i), 3.0)*d_(1,i); 
+		sum_rhs += pow(d(0,i), 3.0)*d(1,i); 
 	}
 
 	Eigen::VectorXd rhs(4); 
-	rhs << d_.row(1).sum(), d_.row(1).dot(d_.row(0)), d_.row(1).dot(d_.row(0).cwiseAbs2()), sum_rhs;
+	rhs << d.row(1).sum(), d.row(1).dot(d.row(0)), d.row(1).dot(d.row(0).cwiseAbs2()), sum_rhs;
 //	std::cout << rhs << std::endl;
 
 	Eigen::Vector4d a = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rhs);//
-
-	return a;
-
-//	std::cout << d(1,0);
-//	fitting points path_.poses[i].position.x and path_.poses[i].position.y
-
-//	
-//	while(l<d &&j<n_poses_path_-1)
-//	{	
-//	
-//	indexOfDistanceFront(j-1, 4); example with distance 4 meters
-//	
-//	}
+	
+	poly_a_ =a(3); 
+	poly_b_= a(2);
+	poly_c_= a(1);
+	poly_d_= a(0);
+	
 }
 
 geometry_msgs::Vector3 MPC::indexOfDistanceFront(int i, float d)
