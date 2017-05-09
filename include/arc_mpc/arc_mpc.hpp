@@ -18,8 +18,9 @@
 #include <sys/time.h>
 #include <algorithm>
 #include <Eigen/Dense>
-#include "../arc_solver/arc_solver/include/arc_solver.h"
-
+#include <../arc_solver/arc_solver/include/arc_solver.h>
+#include <../arc_solver/arc_solver_casadi2forces.c>
+#include <visualization_msgs/Marker.h>
 class MPC{
 
 public:
@@ -104,6 +105,6 @@ private:
 	arc_solver_output solver_output_;
 	arc_solver_info solver_info_;
 	FILE fs_;
-	arc_solver_ExtFunc arc_solver_evalExtFunctions_;
+	arc_solver_ExtFunc pt2Function;
 
 };

@@ -20,10 +20,10 @@ std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
 //Solver constants
 float TIME_HORIZON=10;
-float SAMPLING_TIME=1;
+float SAMPLING_TIME=0.1;
 int N_VAR=6;
 int N_PARAM=3;	//x_ref y_ref v_ref
-int N_STEPS=4;
+int N_STEPS=9;
 int N_INIT=4;
 
 MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
@@ -59,30 +59,104 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME)
 	ref_v_.clear();
 	steps_in_horizon_=TIME_HORIZON/SAMPLING_TIME;
 //Interface to casadi
-	/*
-	//#ifdef _cplusplus
-	//extern "C" {
-	//#endif
+	
+	#ifdef _cplusplus
+	extern "C" {
+	#endif
 	   	extern void arc_solver_casadi2forces(double *x, double *y, double *l, double *p,
 	                                                double *f, double *nabla_f, double *c, double *nabla_c,
 	                                                double *h, double *nabla_h, double *H, int stage);
-	//#ifdef _cplusplus
-	//}
-	//#endif 
+	pt2Function = &arc_solver_casadi2forces;
+	#ifdef _cplusplus
+	}
+	#endif 
 
-	arc_solver_ExtFunc pt2Function = &arc_solver_casadi2forces;
-	*/
+
+	
 //TEST
 poly_a_=0;
 poly_b_=0;
 poly_c_=0.2;
 poly_d_=0;
 findReferencePointsPoly();
+for(int i=0;i<8;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
 setSolverParam();
-for(int i=0;i<N_PARAM*N_STEPS;i++) std::cout<<solver_param_.all_parameters[i]<<std::endl;
-setSolverParam();
-//int ciao=arc_solver_solve(&solver_param_, &solver_output_, &solver_info_,stdout, pt2Function);
-//std::cout<<"int= "<<ciao<<std::endl;
+for (int i=0;i<27;i++) std::cout<<"all_param "<<i<<": "<<solver_param_.all_parameters[i]<<std::endl;
+int ciao=arc_solver_solve(&solver_param_, &solver_output_, &solver_info_,stdout, pt2Function);
+std::cout<<"int= "<<ciao<<std::endl;
+std::cout<<std::endl;
+std::cout<<"output0 "<<solver_output_.x1[0]<<std::endl;
+std::cout<<"output0 "<<solver_output_.x2[0]<<std::endl;
+std::cout<<"output0 "<<solver_output_.x3[0]<<std::endl;
+std::cout<<"output0 "<<solver_output_.x4[0]<<std::endl;
+std::cout<<"output0 "<<solver_output_.x5[0]<<std::endl;
+std::cout<<"output0 "<<solver_output_.x6[0]<<std::endl;
+std::cout<<"output0 "<<solver_output_.x7[0]<<std::endl;
+std::cout<<"output0 "<<solver_output_.x8[0]<<std::endl;
+std::cout<<"output0 "<<solver_output_.x9[0]<<std::endl;
+std::cout<<std::endl;
+std::cout<<"output1 "<<solver_output_.x1[1]<<std::endl;
+std::cout<<"output1 "<<solver_output_.x2[1]<<std::endl;
+std::cout<<"output1 "<<solver_output_.x3[1]<<std::endl;
+std::cout<<"output1 "<<solver_output_.x4[1]<<std::endl;
+std::cout<<"output1 "<<solver_output_.x5[1]<<std::endl;
+std::cout<<"output1 "<<solver_output_.x6[1]<<std::endl;
+std::cout<<"output1 "<<solver_output_.x7[1]<<std::endl;
+std::cout<<"output1 "<<solver_output_.x8[1]<<std::endl;
+std::cout<<"output1 "<<solver_output_.x9[1]<<std::endl;
+std::cout<<std::endl;
+std::cout<<"output2 "<<solver_output_.x1[2]<<std::endl;
+std::cout<<"output2 "<<solver_output_.x2[2]<<std::endl;
+std::cout<<"output2 "<<solver_output_.x3[2]<<std::endl;
+std::cout<<"output2 "<<solver_output_.x4[2]<<std::endl;
+std::cout<<"output2 "<<solver_output_.x5[2]<<std::endl;
+std::cout<<"output2 "<<solver_output_.x6[2]<<std::endl;
+std::cout<<"output2 "<<solver_output_.x7[2]<<std::endl;
+std::cout<<"output2 "<<solver_output_.x8[2]<<std::endl;
+std::cout<<"output2 "<<solver_output_.x9[2]<<std::endl;
+std::cout<<std::endl;
+std::cout<<"output3 "<<solver_output_.x1[3]<<std::endl;
+std::cout<<"output3 "<<solver_output_.x2[3]<<std::endl;
+std::cout<<"output3 "<<solver_output_.x3[3]<<std::endl;
+std::cout<<"output3 "<<solver_output_.x4[3]<<std::endl;
+std::cout<<"output3 "<<solver_output_.x5[3]<<std::endl;
+std::cout<<"output3 "<<solver_output_.x6[3]<<std::endl;
+std::cout<<"output3 "<<solver_output_.x7[3]<<std::endl;
+std::cout<<"output3 "<<solver_output_.x8[3]<<std::endl;
+std::cout<<"output3 "<<solver_output_.x9[3]<<std::endl;
+std::cout<<std::endl;
+std::cout<<"output4 "<<solver_output_.x1[4]<<std::endl;
+std::cout<<"output4 "<<solver_output_.x2[4]<<std::endl;
+std::cout<<"output4 "<<solver_output_.x3[4]<<std::endl;
+std::cout<<"output4 "<<solver_output_.x4[4]<<std::endl;
+std::cout<<"output4 "<<solver_output_.x5[4]<<std::endl;
+std::cout<<"output4 "<<solver_output_.x6[4]<<std::endl;
+std::cout<<"output4 "<<solver_output_.x7[4]<<std::endl;
+std::cout<<"output4 "<<solver_output_.x8[4]<<std::endl;
+std::cout<<"output4 "<<solver_output_.x9[4]<<std::endl;
+std::cout<<std::endl;
+std::cout<<"output5 "<<solver_output_.x1[5]<<std::endl;
+std::cout<<"output5 "<<solver_output_.x2[5]<<std::endl;
+std::cout<<"output5 "<<solver_output_.x3[5]<<std::endl;
+std::cout<<"output5 "<<solver_output_.x4[5]<<std::endl;
+std::cout<<"output5 "<<solver_output_.x5[5]<<std::endl;
+std::cout<<"output5 "<<solver_output_.x6[5]<<std::endl;
+std::cout<<"output5 "<<solver_output_.x7[5]<<std::endl;
+std::cout<<"output5 "<<solver_output_.x8[5]<<std::endl;
+std::cout<<"output5 "<<solver_output_.x9[5]<<std::endl;
+std::cout<<std::endl;
+std::cout<<"output6 "<<solver_output_.x1[6]<<std::endl;
+std::cout<<"output6 "<<solver_output_.x2[6]<<std::endl;
+std::cout<<"output6 "<<solver_output_.x3[6]<<std::endl;
+std::cout<<"output6 "<<solver_output_.x4[6]<<std::endl;
+std::cout<<"output6 "<<solver_output_.x5[6]<<std::endl;
+std::cout<<"output6 "<<solver_output_.x6[6]<<std::endl;
+std::cout<<"output6 "<<solver_output_.x7[6]<<std::endl;
+std::cout<<"output6 "<<solver_output_.x8[6]<<std::endl;
+std::cout<<"output6 "<<solver_output_.x9[6]<<std::endl;
+std::cout<<std::endl;
+//PLOT
+
 }
 
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
@@ -112,11 +186,11 @@ void MPC::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
 void MPC::setSolverParam()	//To test
 {
 	//Reference values	
-	for(int i=0;i<N_STEPS;i++)
+	for(int i=0;i<N_PARAM*N_STEPS;i+=N_PARAM)
 	{
 	solver_param_.all_parameters[i]=ref_x_[i];
-	solver_param_.all_parameters[i+N_STEPS]=ref_y_[i];
-	solver_param_.all_parameters[i+2*N_STEPS]=ref_v_[i];
+	solver_param_.all_parameters[i+1]=ref_y_[i];
+	solver_param_.all_parameters[i+2]=ref_v_[i];
 	}
 
 	//Booooooo
@@ -130,8 +204,11 @@ void MPC::setSolverParam()	//To test
 }
 float MPC::vRef(int index)	//For the moment const=3
 {	
-//	return v_ref_[index];
-return 3;
+	geometry_msgs::Point local=arc_tools::globalToLocal(path_.poses[index].pose.position, state_);
+	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*radiusPoly(local.x));	
+	float v_a_priori=v_ref_[index];
+	float v_ref=std::min(v_a_priori,v_limit);	
+	return v_ref;
 }
 
 float MPC::vRef(geometry_msgs::Point local, int i_start, int i_end)	//For the moment const=3
@@ -141,15 +218,14 @@ float MPC::vRef(geometry_msgs::Point local, int i_start, int i_end)	//For the mo
 	int index=localPointToPathIndex(local, i_start, i_end);
 	float v_a_priori=v_ref_[index];
 	float v_ref=std::min(v_a_priori,v_limit);	
-	std::cout<<"Vpriori "<<v_a_priori<<" v_limit "<<v_limit<<" v_ref final "<<v_ref<<std::endl;
-//	return v_ref;
-return 3;
+std::cout<<"Vpriori "<<v_a_priori<<" v_limit "<<v_limit<<" v_ref final "<<v_ref<<std::endl;
+	return v_ref;
 }
 void MPC::findReferencePointsPoly()
 {
 	float x_next;
 	float x_curr=0;
-	float v_ref=state_.pose_diff;	//v_ref_[state_.current_];weniger sinn 
+	float v_ref=state_.pose_diff;	//first reference velocity is actual velocity
 	//Integers there to keep track of position in path. So to read out proper v_ref[].
 	int j_start=state_.current_arrayposition;
 	int j_end;
@@ -166,6 +242,7 @@ void MPC::findReferencePointsPoly()
 		ref_point.y = yPoly(x_next);
 		ref_x_.push_back(ref_point.x);
 		ref_y_.push_back(ref_point.y);
+std::cout<<"reference: "<<std::endl<<ref_point<<std::endl;
 		//Find reference velocity at next point.
 		j_end=indexOfDistanceFront(j_start,20).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
 		j_next=localPointToPathIndex(ref_point , j_start , j_end);
@@ -286,16 +363,9 @@ void MPC::readPathFromTxt(std::string inFileName)
 	float n=n_poses_path_;
 	for(int i_vel=0;i_vel<n_poses_path_;i_vel++)
 	{
-	    //First calculate physical limit velocity
-		float lad_v= K2_LAD_V + K1_LAD_V*v_abs_;
-		//find reference index for curvature
-		int i_radius=indexOfDistanceFront(i_vel, lad_v).x;
-		if(i_radius>=n_poses_path_) i_radius=n_poses_path_-1;
-		float v_limit=sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i_radius));
 	    //Upper buonds
 		//MAX_ABSOLUTE_VELOCITY
-		float v_bounded=std::min(v_limit,MAX_ABSOLUTE_VELOCITY);
-		v_bounded=std::min(v_bounded,teach_vel_[i_vel]+V_FREEDOM);
+		float v_bounded=std::min(teach_vel_[i_vel]+V_FREEDOM,MAX_ABSOLUTE_VELOCITY);
 		float C=1;
 	    //Slow down
 		if (i_vel>=slow_down_index_)
@@ -351,7 +421,7 @@ Eigen::MatrixXd MPC::pathToMatrix(float lad)  //Let's see
 	geometry_msgs::Point p= arc_tools::globalToLocal(path_.poses[state_.current_arrayposition+i].pose.position, state_);
 	d(0,i) = p.x;
 	d(1,i) = p.y;	
-}
+	}
 	return d;
 }
 
@@ -388,7 +458,7 @@ void MPC::calculateParamFun(float lad_interpolation)
 	}
 	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(4,4);
 	A << lenght, sum1, sum2, sum3, sum1, sum2, sum3, sum4, sum2, sum3, sum4, sum5, sum3, sum4, sum5, sum6;
-	std::cout << A << std::endl;
+//	std::cout << A << std::endl;
 
 	float sum_rhs = 0;
 	for (int i=0; i<lenght; i++)
@@ -417,10 +487,17 @@ void MPC::getOutputAndReact()
 	if(flag==1)
 	{
 	//Set inputs
-	
+	u_.steering_angle=180/M_PI*solver_output_.x1[1];
+	u_.speed=solver_output_.x5[1];
+	u_.acceleration=solver_output_.x1[1];
+	pub_stellgroessen_.publish(u_);
 	}
 	else if(flag==0)
 	{
+	u_.steering_angle=solver_output_.x1[1];
+	u_.speed=solver_output_.x5[1];
+	u_.acceleration=solver_output_.x1[1];
+	pub_stellgroessen_.publish(u_);
 	std::cout<<"Timeout"<<std::endl;
 	}
 	else if(flag==-6)
@@ -455,25 +532,25 @@ int MPC::localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end)
 			
 		}	
 	}
-	std::cout<<"nearest index: "<<j<<std::endl<<path_.poses[j].pose.position<<std::endl;
+//	std::cout<<"nearest index: "<<j<<std::endl<<path_.poses[j].pose.position<<std::endl;
 	return j;
 }
 
 geometry_msgs::Point MPC::localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_)
 {	
-std::cout<<"Local point in local coordinate convention "<<p_local<<std::endl; 
+//std::cout<<"Local point in local coordinate convention "<<p_local<<std::endl; 
 	//Change local coordinates
 	float temp=p_local.x;
 	p_local.x=p_local.y;
 	p_local.y=-temp;
-std::cout<<"Local point in global coordinate convention "<<p_local<<std::endl;  
+//std::cout<<"Local point in global coordinate convention "<<p_local<<std::endl;  
 	//Rotate              
 	geometry_msgs::Point p_add=arc_tools::rotationLocalToGlobal(p_local,state_);
-std::cout<<"Local point rotated "<<p_add<<std::endl; 
+//std::cout<<"Local point rotated "<<p_add<<std::endl; 
 	geometry_msgs::Point p_global=state_.pose.pose.position;
 	p_global.x+=p_add.x;
 	p_global.y+=p_add.y;
-std::cout<<"Global position "<<p_global<<std::endl;
+//std::cout<<"Global position "<<p_global<<std::endl;
 	return p_global;
 }
 
