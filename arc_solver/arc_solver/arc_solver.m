@@ -2,20 +2,31 @@
 %
 %   OUTPUT = arc_solver(PARAMS) solves a multistage problem
 %   subject to the parameters supplied in the following struct:
-%       PARAMS.x0 - column vector of length 54
+%       PARAMS.x0 - column vector of length 160
 %       PARAMS.xinit - column vector of length 4
-%       PARAMS.all_parameters - column vector of length 27
+%       PARAMS.all_parameters - column vector of length 220
 %
 %   OUTPUT returns the values of the last iteration of the solver where
-%       OUTPUT.x1 - column vector of size 6
-%       OUTPUT.x2 - column vector of size 6
-%       OUTPUT.x3 - column vector of size 6
-%       OUTPUT.x4 - column vector of size 6
-%       OUTPUT.x5 - column vector of size 6
-%       OUTPUT.x6 - column vector of size 6
-%       OUTPUT.x7 - column vector of size 6
-%       OUTPUT.x8 - column vector of size 6
-%       OUTPUT.x9 - column vector of size 6
+%       OUTPUT.x01 - column vector of size 8
+%       OUTPUT.x02 - column vector of size 8
+%       OUTPUT.x03 - column vector of size 8
+%       OUTPUT.x04 - column vector of size 8
+%       OUTPUT.x05 - column vector of size 8
+%       OUTPUT.x06 - column vector of size 8
+%       OUTPUT.x07 - column vector of size 8
+%       OUTPUT.x08 - column vector of size 8
+%       OUTPUT.x09 - column vector of size 8
+%       OUTPUT.x10 - column vector of size 8
+%       OUTPUT.x11 - column vector of size 8
+%       OUTPUT.x12 - column vector of size 8
+%       OUTPUT.x13 - column vector of size 8
+%       OUTPUT.x14 - column vector of size 8
+%       OUTPUT.x15 - column vector of size 8
+%       OUTPUT.x16 - column vector of size 8
+%       OUTPUT.x17 - column vector of size 8
+%       OUTPUT.x18 - column vector of size 8
+%       OUTPUT.x19 - column vector of size 8
+%       OUTPUT.x20 - column vector of size 8
 %
 %   [OUTPUT, EXITFLAG] = arc_solver(PARAMS) returns additionally
 %   the integer EXITFLAG indicating the state of the solution with 

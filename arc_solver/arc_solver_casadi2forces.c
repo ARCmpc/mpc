@@ -13,8 +13,8 @@ extern "C" {
 /* prototyes for models */
 extern void arc_solver_model_1(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res);
 extern void arc_solver_model_1_sparsity(int i, int *nrow, int *ncol, const int **colind, const int **row);
-extern void arc_solver_model_9(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res);
-extern void arc_solver_model_9_sparsity(int i, int *nrow, int *ncol, const int **colind, const int **row);
+extern void arc_solver_model_20(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res);
+extern void arc_solver_model_20_sparsity(int i, int *nrow, int *ncol, const int **colind, const int **row);
     
 
 /* copies data from sparse matrix into a dense one */
@@ -51,11 +51,11 @@ void arc_solver_casadi2forces(arc_solver_FLOAT *x,        /* primal vars        
     
     /* temporary storage for casadi sparse output */
     arc_solver_FLOAT this_f;
-    arc_solver_FLOAT nabla_f_sparse[2];
+    arc_solver_FLOAT nabla_f_sparse[7];
     
     
-    arc_solver_FLOAT c_sparse[4];
-    arc_solver_FLOAT nabla_c_sparse[16];
+    arc_solver_FLOAT c_sparse[6];
+    arc_solver_FLOAT nabla_c_sparse[18];
             
     
     /* pointers to row and column info for 
@@ -73,7 +73,7 @@ void arc_solver_casadi2forces(arc_solver_FLOAT *x,        /* primal vars        
     out[0] = &this_f;
     out[1] = nabla_f_sparse;
                 
-	 if (stage >= 0 && stage < 8)
+	 if (stage >= 0 && stage < 19)
 	 {
 		 /* set inputs */
 		 out[2] = c_sparse;
@@ -88,13 +88,13 @@ void arc_solver_casadi2forces(arc_solver_FLOAT *x,        /* primal vars        
 		 
 	 }
 
-	 if (stage >= 8 && stage < 9)
+	 if (stage >= 19 && stage < 20)
 	 {
 		 /* call CasADi */
-		 arc_solver_model_9(in, out);
+		 arc_solver_model_20(in, out);
 
 		 /* copy to dense */
-		 if( nabla_f ){ arc_solver_model_9_sparsity(3, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, nabla_f_sparse, nabla_f); }
+		 if( nabla_f ){ arc_solver_model_20_sparsity(3, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, nabla_f_sparse, nabla_f); }
 		 
 	 }
 

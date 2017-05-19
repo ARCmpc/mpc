@@ -5,6 +5,7 @@
 #include "arc_tools/timing.hpp"
 #include "ackermann_msgs/AckermannDrive.h"
 #include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/Vector3.h"
 #include "math.h"
 #include "nav_msgs/Path.h"
@@ -24,11 +25,12 @@
 class MPC{
 
 public:
-	MPC(ros::NodeHandle* n, std::string PATH_NAME);
+	MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE);
 	~MPC();
 	void stateCallback(const arc_msgs::State::ConstPtr& incoming_state);
 	void obstacleCallback(const std_msgs::Float64::ConstPtr& msg);
 	void guiStopCallback(const std_msgs::Bool::ConstPtr& msg);
+	void stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incoming_state);
 	
 	float distanceIJ(int from_i , int to_i );
 
@@ -37,7 +39,7 @@ public:
 
 	void calculateParamFun(float lad_interpolation);
 	Eigen::MatrixXd pathToMatrix(float lad);
-	void writeTxt(float lad); 
+	void writeTxt(); 
 	float yPoly(float x);
 	float radiusPoly(float x);
 	void findReferencePointsLinear();
@@ -61,10 +63,13 @@ private:
 	ros::NodeHandle* n_;
 	// Publishers.
 	ros::Publisher pub_stellgroessen_;
+	ros::Publisher pub_output_1_;
+	ros::Publisher pub_output_2_;
 	// Subscribers.
 	ros::Subscriber sub_state_;
 	ros::Subscriber distance_to_obstacle_sub_;
 	ros::Subscriber gui_stop_sub_;
+	ros::Subscriber sub_state_matlab_;
 
 	nav_msgs::Path path_;
 	nav_msgs::Path path_diff_;
@@ -100,6 +105,9 @@ private:
 	float poly_b_;
 	float poly_c_;
 	float poly_d_;
+	//Simulation 
+	std_msgs::Float32MultiArray matlab_output_1_;
+	std_msgs::Float32MultiArray matlab_output_2_;
 	//Solver
 	arc_solver_params solver_param_;
 	arc_solver_output solver_output_;

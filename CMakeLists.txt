@@ -10,7 +10,7 @@ catkin_simple(ALL_DEPS_REQUIRED)
 
 cs_add_library(${PROJECT_NAME}
 	src/arc_mpc.cpp
-	arc_solver/arc_solver_model_9.c
+	arc_solver/arc_solver_model_20.c
 	arc_solver/arc_solver_model_1.c
 	arc_solver/arc_solver/obj/arc_solver.o
 	arc_solver/arc_solver/lib/arc_solver.so

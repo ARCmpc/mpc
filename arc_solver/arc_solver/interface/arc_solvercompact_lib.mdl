@@ -60,13 +60,13 @@ Model {
       }
     }
   }
-  Created		  "5/8/2017 2:16:18 PM"
+  Created		  "5/19/2017 6:41:24 PM"
   Creator		  "embotech GmbH"
   UpdateHistory		  "UpdateHistoryNever"
   ModifiedByFormat	  "%<Auto>"
   LastModifiedBy	  "embotech GmbH"
   ModifiedDateFormat	  "%<Auto>"
-  LastModifiedDate	  "5/8/2017 2:16:18 PM"
+  LastModifiedDate	  "5/19/2017 6:41:24 PM"
   RTWModifiedTimeStamp	  315310195
   ModelVersionFormat	  "1.%<AutoIncrement:2>"
   ConfigurationManager	  "None"
@@ -804,12 +804,12 @@ Model {
 	Help			"arc_solver_simulinkBlockcompact provides an easy Simulink interface for simulating your customized solver.  \n"
 	"\nOUTPUTS = arc_solver(INPUTS) solves an optimization problem where:\n\n"
 	"INPUTS:\n"
-	" - x0 - column vector of length 54\n "
+	" - x0 - column vector of length 160\n "
 " - xinit - column vector of length 4\n "
-" - all_parameters - column vector of length 27\n "
+" - all_parameters - column vector of length 220\n "
 
 	"\nOUTPUTS:\n"
-	" - outputs - column vector of length 54\n "
+	" - outputs - column vector of length 160\n "
 
 	"\n For more information, see https://www.embotech.com/FORCES-Pro/How-to-use/Simulink-Interface/Simulink-Block \n "
 

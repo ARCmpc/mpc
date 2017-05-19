@@ -90,14 +90,14 @@ typedef double arc_solverINTERFACE_FLOAT;
 /* fill this with data before calling the solver! */
 typedef struct arc_solver_params
 {
-    /* vector of size 54 */
-    arc_solver_FLOAT x0[54];
+    /* vector of size 160 */
+    arc_solver_FLOAT x0[160];
 
     /* vector of size 4 */
     arc_solver_FLOAT xinit[4];
 
-    /* vector of size 27 */
-    arc_solver_FLOAT all_parameters[27];
+    /* vector of size 220 */
+    arc_solver_FLOAT all_parameters[220];
 
 } arc_solver_params;
 
@@ -106,32 +106,65 @@ typedef struct arc_solver_params
 /* the desired variables are put here by the solver */
 typedef struct arc_solver_output
 {
-    /* vector of size 6 */
-    arc_solver_FLOAT x1[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x01[8];
 
-    /* vector of size 6 */
-    arc_solver_FLOAT x2[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x02[8];
 
-    /* vector of size 6 */
-    arc_solver_FLOAT x3[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x03[8];
 
-    /* vector of size 6 */
-    arc_solver_FLOAT x4[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x04[8];
 
-    /* vector of size 6 */
-    arc_solver_FLOAT x5[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x05[8];
 
-    /* vector of size 6 */
-    arc_solver_FLOAT x6[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x06[8];
 
-    /* vector of size 6 */
-    arc_solver_FLOAT x7[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x07[8];
 
-    /* vector of size 6 */
-    arc_solver_FLOAT x8[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x08[8];
 
-    /* vector of size 6 */
-    arc_solver_FLOAT x9[6];
+    /* vector of size 8 */
+    arc_solver_FLOAT x09[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x10[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x11[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x12[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x13[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x14[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x15[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x16[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x17[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x18[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x19[8];
+
+    /* vector of size 8 */
+    arc_solver_FLOAT x20[8];
 
 } arc_solver_output;
 
