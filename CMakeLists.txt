@@ -15,7 +15,7 @@ cs_add_library(${PROJECT_NAME}
 	arc_solver/arc_solver/obj/arc_solver.o
 	arc_solver/arc_solver/lib/arc_solver.so
 )
-#add_library(${PROJECT_NAME} OBJECT arc_solver/arc_solver_model_9.o arc_solver_model_1.o arc_solver_casadi2forces.o)
+#add_library(${PROJECT_NAME} OBJECT arc_solver/arc_solver/obj/arc_solver.o)
 #add_library( src/arc_mpc.cpp)
 #add_library(arc_solver_model_9.o src/arc_mpc.cpp)
 #include_directories(include ${catkin_INCLUDE_DIRS})

@@ -35,7 +35,7 @@ typedef double arc_solverINTERFACE_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef arc_solver_SET_PRINTLEVEL
-#define arc_solver_SET_PRINTLEVEL    (2)
+#define arc_solver_SET_PRINTLEVEL    (1)
 #endif
 
 /* timing */

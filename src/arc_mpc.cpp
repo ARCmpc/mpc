@@ -86,20 +86,6 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 
 	
 //TEST
-state_.pose.pose.position.x=0;
-state_.pose.pose.position.y=0;
-state_.pose.pose.position.z=0;
-state_.pose.pose.orientation.x=0;
-state_.pose.pose.orientation.y=0;
-state_.pose.pose.orientation.z= 0.707;
-state_.pose.pose.orientation.w= 0.707;
-state_.current_arrayposition=1;
-geometry_msgs::Pose2D pose;
-pose.x=4;
-pose.y=1;
-pose.theta=M_PI/2;
-state_=arc_tools::generate2DState(pose);
-std::cout<<"State "<<state_<<std::endl<<std::endl;
 /*poly_a_=0;
 poly_b_=0;
 poly_c_=0.2;
@@ -226,7 +212,6 @@ void MPC::stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incomin
 	pose.y=incoming_state->y;
 	pose.theta=incoming_state->w;
 	state_=arc_tools::generate2DState(pose);
-std::cout<<"state2d: "<<pose<<std::endl<<"state3d: "<<state_<<std::endl;
 	//set velocity	
 	state_.pose_diff=incoming_state->z;
 	v_abs_=state_.pose_diff;
@@ -265,16 +250,27 @@ void MPC::setSolverParam()	//To test
 	int j=0;	
 	for(int i=0;i<N_PARAM*N_STEPS;i+=N_PARAM, j++)
 	{
+	//p(1): Reference x
 	solver_param_.all_parameters[i]=ref_x_[j];
+	//p(2): Reference y
 	solver_param_.all_parameters[i+1]=ref_y_[j];
+	//p(3): Reference v
 	solver_param_.all_parameters[i+2]=ref_v_[j];
+	//p(4): Weight dx
 	solver_param_.all_parameters[i+3]=1;
+	//p(5): Weight dy
 	solver_param_.all_parameters[i+4]=1;
+	//p(6): Weight dv
 	solver_param_.all_parameters[i+5]=0;
-	solver_param_.all_parameters[i+6]=0;
-	solver_param_.all_parameters[i+7]=0;
+	//p(7): Weight change of acceleration
+	solver_param_.all_parameters[i+6]=1;
+	//p(8): Weight change of steer
+	solver_param_.all_parameters[i+7]=1;
+	//p(9): Weight acceleration
 	solver_param_.all_parameters[i+8]=0;
+	//p(10): Weight steer
 	solver_param_.all_parameters[i+9]=0;	
+	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=0;
 	}
 
