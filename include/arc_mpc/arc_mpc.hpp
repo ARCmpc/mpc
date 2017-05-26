@@ -46,6 +46,7 @@ public:
 	void findReferencePointsPoly();
 	float nextReferenceXPolynomial(float  x_start, float step);
 	void setSolverParam();
+	float costWeight(int i);
 	void getOutputAndReact();
 	float vRef(int index);
 	float vRef(geometry_msgs::Point local, int i_start, int i_end);

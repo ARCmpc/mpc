@@ -10,7 +10,7 @@ float K2_LAD_V=1;
 float SLOW_DOWN_DISTANCE=10; 
 float SLOW_DOWN_PUFFER=2;
 float V_FREEDOM=0.2;
-float INTERPOLATION_DISTANCE_FRONT=10;
+float INTERPOLATION_DISTANCE_FRONT=20;
 float OBSTACLE_SLOW_DOWN_DISTANCE;
 float OBSTACLE_PUFFER_DISTANCE;
 float SHUT_DOWN_TIME;
@@ -244,34 +244,41 @@ std::cout<<"Param setted "<<std::endl;
 	//END LOOP
 
 }
+float MPC::costWeight(int i)
+{	
+	float f=0.8*float(i);
+	return f;
+}
 void MPC::setSolverParam()	//To test
 {
-	//Reference values
 	int j=0;	
 	for(int i=0;i<N_PARAM*N_STEPS;i+=N_PARAM, j++)
 	{
+//Reference Values
 	//p(1): Reference x
 	solver_param_.all_parameters[i]=ref_x_[j];
 	//p(2): Reference y
 	solver_param_.all_parameters[i+1]=ref_y_[j];
 	//p(3): Reference v
 	solver_param_.all_parameters[i+2]=ref_v_[j];
+//Cost weights
 	//p(4): Weight dx
-	solver_param_.all_parameters[i+3]=1;
+	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *1;
 	//p(5): Weight dy
-	solver_param_.all_parameters[i+4]=1;
+	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *1;
 	//p(6): Weight dv
-	solver_param_.all_parameters[i+5]=0;
+	solver_param_.all_parameters[i+5]=costWeight(j)/5 *0;
 	//p(7): Weight change of acceleration
-	solver_param_.all_parameters[i+6]=1;
+	solver_param_.all_parameters[i+6]=costWeight(j)/5 *5;
 	//p(8): Weight change of steer
-	solver_param_.all_parameters[i+7]=1;
+	solver_param_.all_parameters[i+7]=costWeight(j)/M_PI *5;
 	//p(9): Weight acceleration
-	solver_param_.all_parameters[i+8]=0;
+	solver_param_.all_parameters[i+8]=costWeight(j)/5 *0;
 	//p(10): Weight steer
-	solver_param_.all_parameters[i+9]=0;	
+	solver_param_.all_parameters[i+9]=costWeight(j)/M_PI *0;
+//State parameter
 	//p(11): Street slope, not implemented 
-	solver_param_.all_parameters[i+10]=0;
+	solver_param_.all_parameters[i+10]=costWeight(j)*0;
 	}
 
 	//Booooooo
