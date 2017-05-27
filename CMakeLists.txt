@@ -12,8 +12,8 @@ cs_add_library(${PROJECT_NAME}
 	src/arc_mpc.cpp
 	arc_solver/arc_solver_model_20.c
 	arc_solver/arc_solver_model_1.c
-	arc_solver/arc_solver/obj/arc_solver.o
-	arc_solver/arc_solver/lib/arc_solver.so
+	arc_solver/arc_solver/obj_target/arc_solver.o
+##	arc_solver/arc_solver/lib_target/libarc_solver.so
 )
 #add_library(${PROJECT_NAME} OBJECT arc_solver/arc_solver/obj/arc_solver.o)
 #add_library( src/arc_mpc.cpp)
