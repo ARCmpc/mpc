@@ -10,7 +10,7 @@ float K2_LAD_V=1;
 float SLOW_DOWN_DISTANCE=10; 
 float SLOW_DOWN_PUFFER=2;
 float V_FREEDOM=0.2;
-float INTERPOLATION_DISTANCE_FRONT=20;
+float INTERPOLATION_DISTANCE_FRONT=11.47;	//Bogenlänge eines Viertelkreises mit redius 7.5m (als maximale grösse)
 float OBSTACLE_SLOW_DOWN_DISTANCE;
 float OBSTACLE_PUFFER_DISTANCE;
 float SHUT_DOWN_TIME;
@@ -263,19 +263,19 @@ void MPC::setSolverParam()	//To test
 	solver_param_.all_parameters[i+2]=ref_v_[j];
 //Cost weights
 	//p(4): Weight dx
-	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *1;
+	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *1;	//Nermed on 1m
 	//p(5): Weight dy
-	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *1;
+	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *1; //Nermed on 1m
 	//p(6): Weight dv
-	solver_param_.all_parameters[i+5]=costWeight(j)/5 *0;
+	solver_param_.all_parameters[i+5]=costWeight(j)/5 *0;	//Normed on 5m/s
 	//p(7): Weight change of acceleration
-	solver_param_.all_parameters[i+6]=costWeight(j)/5 *5;
+	solver_param_.all_parameters[i+6]=costWeight(j)/8 *10;	//Normed on 8m/s²
 	//p(8): Weight change of steer
-	solver_param_.all_parameters[i+7]=costWeight(j)/M_PI *5;
+	solver_param_.all_parameters[i+7]=costWeight(j)/(M_PI*30/180) *100;	//Normed on 30 deg
 	//p(9): Weight acceleration
-	solver_param_.all_parameters[i+8]=costWeight(j)/5 *0;
+	solver_param_.all_parameters[i+8]=costWeight(j)/8 *5;	////Normed on 8m/s²
 	//p(10): Weight steer
-	solver_param_.all_parameters[i+9]=costWeight(j)/M_PI *0;
+	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*30/180) *0;	//Normed on 30 deg
 //State parameter
 	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=costWeight(j)*0;
@@ -519,7 +519,7 @@ void MPC::readPathFromTxt(std::string inFileName)
 	{
 		p=path_.poses[i].pose.position;
 	  	streamteachpoints <<p.x<<" "<<
-	           p.y<<"\r\n";
+	           p.y<<" "<<teach_vel_[i]<<"\r\n";
 	}
 	streamteachpoints.close();
 

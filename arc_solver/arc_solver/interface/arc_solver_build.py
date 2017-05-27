@@ -30,7 +30,7 @@ import sys
 import distutils
 
 # determine source file
-sourcefile = os.path.join(os.getcwd(),"arc_solver","src","arc_solver"+".c")
+sourcefile = os.path.join(os.getcwd(),"arc_solver","src_target","arc_solver"+".c")
 
 # determine lib file
 if sys.platform.startswith('win'):
