@@ -23,7 +23,7 @@ std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
 //Solver constants
 float TIME_HORIZON=10;
-float SAMPLING_TIME=0.2;
+float SAMPLING_TIME=0.1;
 int N_VAR=8;
 int N_PARAM=11;	//x_ref y_ref v_ref
 int N_STEPS=20;
@@ -69,7 +69,6 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
-	steps_in_horizon_=TIME_HORIZON/SAMPLING_TIME;
 //Interface to casadi
 	
 	#ifdef _cplusplus
@@ -246,7 +245,7 @@ std::cout<<"Param setted "<<std::endl;
 }
 float MPC::costWeight(int i)
 {	
-	float f=0.8*float(i);
+	float f=1;//0.8*float(i);
 	return f;
 }
 void MPC::setSolverParam()	//To test
@@ -269,7 +268,7 @@ void MPC::setSolverParam()	//To test
 	//p(6): Weight dv
 	solver_param_.all_parameters[i+5]=costWeight(j)/5 *0;	//Normed on 5m/s
 	//p(7): Weight change of acceleration
-	solver_param_.all_parameters[i+6]=costWeight(j)/8 *10;	//Normed on 8m/s²
+	solver_param_.all_parameters[i+6]=costWeight(j)/8 *100;	//Normed on 8m/s²
 	//p(8): Weight change of steer
 	solver_param_.all_parameters[i+7]=costWeight(j)/(M_PI*30/180) *100;	//Normed on 30 deg
 	//p(9): Weight acceleration
@@ -280,15 +279,42 @@ void MPC::setSolverParam()	//To test
 	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=costWeight(j)*0;
 	}
-
-	//Booooooo
-	for(int i=0;i<N_STEPS*N_VAR;i++) solver_param_.x0[i]=0;
-
+	//Initial guess
+	float z[N_STEPS*N_VAR];
+	for(int i=0; i<N_VAR;i++)
+	{
+		z[i]		 =solver_output_.x01[i];
+		z[i+1*N_VAR] =solver_output_.x02[i];
+		z[i+2*N_VAR] =solver_output_.x03[i];
+		z[i+3*N_VAR] =solver_output_.x04[i];
+		z[i+4*N_VAR] =solver_output_.x05[i];
+		z[i+5*N_VAR] =solver_output_.x06[i];
+		z[i+6*N_VAR] =solver_output_.x07[i];
+		z[i+7*N_VAR] =solver_output_.x08[i];
+		z[i+8*N_VAR] =solver_output_.x09[i];
+		z[i+9*N_VAR] =solver_output_.x10[i];
+		z[i+10*N_VAR]=solver_output_.x11[i];
+		z[i+11*N_VAR]=solver_output_.x12[i];
+		z[i+12*N_VAR]=solver_output_.x13[i];
+		z[i+13*N_VAR]=solver_output_.x14[i];
+		z[i+14*N_VAR]=solver_output_.x15[i];
+		z[i+15*N_VAR]=solver_output_.x16[i];
+		z[i+16*N_VAR]=solver_output_.x17[i];
+		z[i+17*N_VAR]=solver_output_.x18[i];
+		z[i+18*N_VAR]=solver_output_.x19[i];
+		z[i+19*N_VAR]=solver_output_.x20[i];
+	}
+	for(int i=0;i<N_VAR*N_STEPS;i++)
+	{
+		solver_param_.x0[i]=z[i];
+	}
 	//Initial conditions
 	solver_param_.xinit[0]=0;	//initial value x-position(local)
 	solver_param_.xinit[1]=0;	//initial value y-position(local)
 	solver_param_.xinit[2]=v_abs_; 	//initial value velocity.
 	solver_param_.xinit[3]=0;	//initial value orientation (local)
+	solver_param_.xinit[4]=u_.acceleration;
+	solver_param_.xinit[5]=u_.steering_angle;
 }
 float MPC::vRef(int index)	//For the moment const=3
 {	

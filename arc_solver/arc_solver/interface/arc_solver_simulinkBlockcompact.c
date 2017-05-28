@@ -82,7 +82,7 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortDirectFeedThrough(S, 0, 1); /* Feedthrough enabled */
     ssSetInputPortRequiredContiguous(S, 0, 1); /*direct input signal access*/	
 	/* Input Port 1 */
-    ssSetInputPortMatrixDimensions(S,  1, 4, 1);
+    ssSetInputPortMatrixDimensions(S,  1, 6, 1);
     ssSetInputPortDataType(S, 1, SS_DOUBLE);
     ssSetInputPortComplexSignal(S, 1, COMPLEX_NO); /* no complex signals suppported */
     ssSetInputPortDirectFeedThrough(S, 1, 1); /* Feedthrough enabled */
@@ -212,7 +212,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
 	/* Copy inputs */
 	for( i=0; i<160; i++){ params.x0[i] = (double) x0[i]; }
-	for( i=0; i<4; i++){ params.xinit[i] = (double) xinit[i]; }
+	for( i=0; i<6; i++){ params.xinit[i] = (double) xinit[i]; }
 	for( i=0; i<220; i++){ params.all_parameters[i] = (double) all_parameters[i]; }
 	
 

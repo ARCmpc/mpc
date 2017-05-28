@@ -47,13 +47,13 @@ typedef double arc_solverINTERFACE_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define arc_solver_SET_MAXIT			(100)	
+#define arc_solver_SET_MAXIT			(1000)	
 
 /* scaling factor of line search (FTB rule) */
 #define arc_solver_SET_FLS_SCALE		(arc_solver_FLOAT)(0.99)      
 
 /* maximum number of supported elements in the filter */
-#define arc_solver_MAX_FILTER_SIZE	(100) 
+#define arc_solver_MAX_FILTER_SIZE	(1000) 
 
 /* maximum number of supported elements in the filter */
 #define arc_solver_MAX_SOC_IT			(4) 
@@ -93,8 +93,8 @@ typedef struct arc_solver_params
     /* vector of size 160 */
     arc_solver_FLOAT x0[160];
 
-    /* vector of size 4 */
-    arc_solver_FLOAT xinit[4];
+    /* vector of size 6 */
+    arc_solver_FLOAT xinit[6];
 
     /* vector of size 220 */
     arc_solver_FLOAT all_parameters[220];

@@ -60,13 +60,13 @@ Model {
       }
     }
   }
-  Created		  "5/26/2017 3:54:04 PM"
+  Created		  "5/28/2017 11:56:26 AM"
   Creator		  "embotech GmbH"
   UpdateHistory		  "UpdateHistoryNever"
   ModifiedByFormat	  "%<Auto>"
   LastModifiedBy	  "embotech GmbH"
   ModifiedDateFormat	  "%<Auto>"
-  LastModifiedDate	  "5/26/2017 3:54:04 PM"
+  LastModifiedDate	  "5/28/2017 11:56:26 AM"
   RTWModifiedTimeStamp	  315310195
   ModelVersionFormat	  "1.%<AutoIncrement:2>"
   ConfigurationManager	  "None"
@@ -805,7 +805,7 @@ Model {
 	"\nOUTPUTS = arc_solver(INPUTS) solves an optimization problem where:\n\n"
 	"INPUTS:\n"
 	" - x0 - column vector of length 160\n "
-" - xinit - column vector of length 4\n "
+" - xinit - column vector of length 6\n "
 " - all_parameters - column vector of length 220\n "
 
 	"\nOUTPUTS:\n"

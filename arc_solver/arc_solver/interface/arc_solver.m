@@ -3,7 +3,7 @@
 %   OUTPUT = arc_solver(PARAMS) solves a multistage problem
 %   subject to the parameters supplied in the following struct:
 %       PARAMS.x0 - column vector of length 160
-%       PARAMS.xinit - column vector of length 4
+%       PARAMS.xinit - column vector of length 6
 %       PARAMS.all_parameters - column vector of length 220
 %
 %   OUTPUT returns the values of the last iteration of the solver where

@@ -106,11 +106,11 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
     {
     mexErrMsgTxt("PARAMS.xinit must be a double.");
     }
-    if( mxGetM(par) != 4 || mxGetN(par) != 1 ) {
-    mexErrMsgTxt("PARAMS.xinit must be of size [4 x 1]");
+    if( mxGetM(par) != 6 || mxGetN(par) != 1 ) {
+    mexErrMsgTxt("PARAMS.xinit must be of size [6 x 1]");
     }
 #endif	 
-    copyMArrayToC(mxGetPr(par), params.xinit, 4);
+    copyMArrayToC(mxGetPr(par), params.xinit, 6);
 
 	par = mxGetField(PARAMS, 0, "all_parameters");
 #ifdef MEXARGMUENTCHECKS

@@ -105,7 +105,7 @@ int arc_solver_model_1(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res) {
   a12=arg[0] ? arg[0][5] : 0;
   a9=cos(a12);
   a8=(a6*a9);
-  a10=1.0000000000000001e-01;
+  a10=5.0000000000000003e-02;
   a5=(a10*a11);
   a5=(a6+a5);
   a7=tan(a14);
@@ -130,7 +130,7 @@ int arc_solver_model_1(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res) {
          a21=(a18*a20);
   a21=(a13*a21);
   a8=(a8+a21);
-  a21=2.0000000000000001e-01;
+  a21=1.0000000000000001e-01;
          a22=(a21*a11);
   a22=(a6+a22);
          a23=tan(a14);
@@ -141,7 +141,7 @@ int arc_solver_model_1(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res) {
          a26=cos(a25);
          a27=(a22*a26);
   a8=(a8+a27);
-  a27=3.3333333333333333e-02;
+  a27=1.6666666666666666e-02;
   a8=(a27*a8);
   a0=(a0+a8);
   if (res[2]!=0) res[2][0]=a0;
