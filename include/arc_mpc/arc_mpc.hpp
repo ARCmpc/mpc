@@ -21,7 +21,10 @@
 #include <Eigen/Dense>
 #include <../arc_solver/arc_solver/include/arc_solver.h>
 #include <../arc_solver/arc_solver_casadi2forces.c>
-#include <visualization_msgs/Marker.h>
+#include <../alglib/src/interpolation.h>
+#include <../alglib/src/stdafx.h>
+#include <stdlib.h>
+#include <stdio.h>
 class MPC{
 
 public:
@@ -38,12 +41,14 @@ public:
 	geometry_msgs::Vector3 indexOfDistanceBack(int i, float d);
 
 	void calculateParamFun(float lad_interpolation);
+	void generateSpline(float lad_interpolation);
 	Eigen::MatrixXd pathToMatrix(float lad);
 	void writeTxt(); 
 	float yPoly(float x);
 	float radiusPoly(float x);
 	void findReferencePointsLinear();
 	void findReferencePointsPoly();
+	void findReferencePointsSpline();
 	float nextReferenceXPolynomial(float  x_start, float step);
 	void setSolverParam();
 	float costWeight(int i);
@@ -52,7 +57,7 @@ public:
 	float vRef(geometry_msgs::Point local, int i_start, int i_end);
 	int localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end);
 	void readPathFromTxt(std::string inFileName);
-	float curveRadius(int i);
+	float curvatureSpline(float t);
 
 	geometry_msgs::Point localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_);
 	geometry_msgs::Point pointAtDistanceLinear(int i, float distance);	//summs up linearly the distance to the points and returns the exact point at certain (summed up) distance
@@ -106,6 +111,12 @@ private:
 	float poly_b_;
 	float poly_c_;
 	float poly_d_;
+	//Spline
+	alglib::spline1dinterpolant c_x_;
+	alglib::spline1dinterpolant c_y_;
+	alglib::real_1d_array t_;
+	alglib::real_1d_array x_;
+	alglib::real_1d_array y_;
 	//Simulation 
 	std_msgs::Float32MultiArray matlab_output_1_;
 	std_msgs::Float32MultiArray matlab_output_2_;

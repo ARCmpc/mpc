@@ -85,91 +85,37 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 
 	
 //TEST
-/*poly_a_=0;
-poly_b_=0;
-poly_c_=0.2;
-poly_d_=0;
-calculateParamFun(10);
-findReferencePointsPoly();
-for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
-setSolverParam();
-for (int i=0;i<27;i++) std::cout<<"all_param "<<i<<": "<<solver_param_.all_parameters[i]<<std::endl;
-int ciao=arc_solver_solve(&solver_param_, &solver_output_, &solver_info_,stdout, pt2Function);
-std::cout<<"int= "<<ciao<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output0 "<<solver_output_.x01[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x02[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x03[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x04[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x05[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x06[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x07[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x08[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x09[0]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output1 "<<solver_output_.x01[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x02[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x03[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x04[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x05[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x06[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x07[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x08[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x09[1]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output2 "<<solver_output_.x01[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x02[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x03[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x04[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x05[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x06[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x07[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x08[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x09[2]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output3 "<<solver_output_.x01[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x02[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x03[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x04[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x05[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x06[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x07[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x08[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x09[3]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output4 "<<solver_output_.x01[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x02[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x03[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x04[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x05[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x06[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x07[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x08[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x09[4]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output5 "<<solver_output_.x01[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x02[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x03[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x04[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x05[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x06[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x07[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x08[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x09[5]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output6 "<<solver_output_.x01[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x02[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x03[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x04[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x05[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x06[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x07[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x08[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x09[6]<<std::endl;
-std::cout<<std::endl;
-std::cout<<poly_a_<<" "<<poly_b_<<" "<<poly_c_<<" "<<poly_d_<<std::endl;
-//PLOT
-writeTxt();*/
+std::stringstream sstr;
+sstr <<5<<" ";
+sstr<<6;
+std::cout<<sstr.str()<<std::endl;
+std::string st="[-1.0,-0.5,0.0,+0.5,+1.0]";
+char* c=&st[0];
+std::cout<<c[0]<<std::endl;
+alglib::real_1d_array x = "[-1.0,-0.5,0.0,0.5,1.0]";
+alglib::real_1d_array y = "[+1.0,0.25,0.0,0.25,+1.0]";
+
+x=alglib::real_1d_array(c);
+double t = 0.25;
+double v;
+alglib::spline1dinterpolant s;
+
+    // build spline
+alglib::spline1dbuildlinear(x, y, s);
+
+    // calculate S(0.25) - it is quite different from 0.25^2=0.0625
+v = spline1dcalc(s, t);
+std::cout<<v<<std::endl;
+
+	geometry_msgs::Pose2D pose;
+	pose.x=0;
+	pose.y=0;
+	pose.theta=0;
+	state_=arc_tools::generate2DState(pose);
+	state_.current_arrayposition=0;
+	generateSpline(159.2);
+//END TEST
+
 }
 
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
@@ -232,9 +178,9 @@ void MPC::stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incomin
 	ref_v_.clear();
 	//Loop
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	calculateParamFun(INTERPOLATION_DISTANCE_FRONT);
-std::cout<<"Param calculated "<<std::endl;
-	findReferencePointsPoly();
+	generateSpline(20);
+std::cout<<"Spline generated "<<std::endl;
+	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
 for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
 	setSolverParam();
@@ -242,6 +188,93 @@ std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
 	//END LOOP
 
+}
+
+void MPC::generateSpline(float lad_interpolation)
+{	
+	std::stringstream t_stream;
+	std::stringstream x_stream;
+	std::stringstream y_stream;
+	t_stream<<"[";
+	x_stream<<"[";
+	y_stream<<"[";
+	float sum=0;
+	int i_start = state_.current_arrayposition;
+	int i_end=indexOfDistanceFront(i_start, lad_interpolation).x;
+	for (int i=i_start; i<i_end; i++)
+	{
+		t_stream<<sum;	
+		geometry_msgs::Point p= arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
+		geometry_msgs::Point p_next= arc_tools::globalToLocal(path_.poses[i+1].pose.position, state_);
+		sum+=sqrt(	pow(p.x-p_next.x,2) + pow(p.y-p_next.y,2) + pow(p.z-p_next.z,2));
+
+		x_stream<<p.x;
+		y_stream<<p.y;
+		if(i<i_end-1)
+			{
+				t_stream<<",";
+				x_stream<<",";
+				y_stream<<",";	
+			}	
+	}
+	t_stream<<"]";
+	x_stream<<"]";
+	y_stream<<"]";
+std::cout<<t_stream.str()<<std::endl<<std::endl<<x_stream.str()<<std::endl<<std::endl<<y_stream.str()<<std::endl;
+	std::string t_string=t_stream.str();
+	std::string x_string=x_stream.str();
+	std::string y_string=y_stream.str();
+	char* s=&t_string[0];
+	t_=alglib::real_1d_array(s);
+	s=&x_string[0];
+	x_=alglib::real_1d_array(s);
+	s=&y_string[0];
+	y_=alglib::real_1d_array(s);
+
+	alglib::spline1dbuildcubic(t_, x_, c_x_);
+	alglib::spline1dbuildcubic(t_, y_, c_y_);
+
+for(int t_0=0; t_0<int(lad_interpolation); t_0++)
+{
+	float x_0= spline1dcalc(c_x_, t_0);
+	float y_0= spline1dcalc(c_y_, t_0);
+	std::cout<<"t_0 "<<t_0<<" x= "<<x_0<<" y= "<<y_0<<std::endl;
+}
+}
+void MPC::findReferencePointsSpline()
+{
+	float t_curr=0;
+	float v_ref=state_.pose_diff;	//first reference velocity is actual velocity
+	//Integers there to keep track of position in path. So to read out proper v_ref[].	
+	float step;		//Meters to next ref_point
+	int j_start=state_.current_arrayposition;
+	int j_end;
+	int j_next;	
+	geometry_msgs::Point ref_point;
+	ref_point.x=spline1dcalc(c_x_, t_curr);
+	ref_point.y=spline1dcalc(c_y_, t_curr);
+	ref_x_.push_back(ref_point.x);
+	ref_y_.push_back(ref_point.y);	
+	for(int i=0; i<N_STEPS;i++)		//Where is first ref point?? at actual point or after first Ts?
+	{	
+		step=v_ref*SAMPLING_TIME;
+		t_curr+=step;
+		//Save next reference point.
+		ref_point.x = spline1dcalc(c_x_, t_curr);
+		ref_point.y = spline1dcalc(c_y_, t_curr);
+		ref_point.z =0;
+		ref_x_.push_back(ref_point.x);
+		ref_y_.push_back(ref_point.y);
+		//Find reference velocity at next point.
+		j_end=indexOfDistanceFront(j_start,30).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
+		j_next=localPointToPathIndex(ref_point , j_start , j_end);
+		//v_ref=v_ref_[j_next];
+		v_ref=vRef(ref_point,j_start,j_end);
+		ref_v_.push_back(v_ref);
+
+		//Actualisation.
+		j_start=j_next;
+	}
 }
 float MPC::costWeight(int i)
 {	
@@ -346,10 +379,12 @@ float MPC::vRef(int index)	//For the moment const=3
 	return v_ref;
 }
 
+
 float MPC::vRef(geometry_msgs::Point local, int i_start, int i_end)	//For the moment const=3
 {	
 	//Physical limit
-	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*radiusPoly(local.x));
+//	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*radiusPoly(local.x));
+	float v_limit=sqrt(MAX_LATERAL_ACCELERATION/curvatureSpline(sqrt(local.x*local.x+local.y*local.y)));
 	int index=localPointToPathIndex(local, i_start, i_end);
 	float v_a_priori=v_ref_[index];
 	float v_ref=std::min(v_a_priori,v_limit);	
@@ -952,9 +987,18 @@ geometry_msgs::Point MPC::pointAtDistanceLinear(int i, float distance)
 	return exact_point;
 }	
 
-float MPC::curveRadius(int i)
+float MPC::curvatureSpline(float t)
 {
-float radius=10;
-return radius;
+float curvature;
+double x;
+double x_d;
+double x_dd;
+double y;
+double y_d;
+double y_dd;
+alglib::spline1ddiff(c_x_,t,x,x_d,x_dd);
+alglib::spline1ddiff(c_y_,t,y,y_d,y_dd);
+curvature=abs(x_d*y_dd-y_d*x_dd)/pow((x_d*x_d+y_d*y_d),1.5);
+return 0.1;
 }
 

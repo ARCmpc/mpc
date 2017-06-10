@@ -31,7 +31,7 @@ static const int CASADI_PREFIX(s3)[] = {1, 8, 0, 1, 2, 3, 4, 5, 5, 6, 7, 0, 0, 0
 #define s3 CASADI_PREFIX(s3)
 /* evaluate_stages */
 int arc_solver_model_20(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res) {
-     arc_solver_FLOAT a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15;
+     arc_solver_FLOAT a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14;
          a0=arg[0] ? arg[0][2] : 0;
          a1=arg[1] ? arg[1][0] : 0;
   a0=(a0-a1);
@@ -66,34 +66,40 @@ int arc_solver_model_20(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res) {
          a13=arg[1] ? arg[1][7] : 0;
   a12=(a13*a12);
   a1=(a1+a12);
-  a12=fabs(a8);
+  a12=sq(a8);
          a14=arg[1] ? arg[1][8] : 0;
   a12=(a14*a12);
   a1=(a1+a12);
-  a12=fabs(a11);
-         a15=arg[1] ? arg[1][9] : 0;
-  a12=(a15*a12);
-  a1=(a1+a12);
-  if (res[0]!=0) res[0][0]=a1;
-  a8=sign(a8);
+  a12=arg[1] ? arg[1][9] : 0;
+  a11=(a12*a11);
+  a1=(a1+a11);
+  a11=sq(a1);
+  if (res[0]!=0) res[0][0]=a11;
+  a8=(a8+a8);
+  a1=(a1+a1);
+  a14=(a14*a1);
   a8=(a8*a14);
   a6=(a6+a6);
+  a10=(a10*a1);
   a6=(a6*a10);
   a8=(a8-a6);
   if (res[1]!=0) res[1][0]=a8;
-  a11=sign(a11);
-  a11=(a11*a15);
+  a12=(a12*a1);
   a9=(a9+a9);
+  a13=(a13*a1);
   a9=(a9*a13);
-  a11=(a11-a9);
-  if (res[1]!=0) res[1][1]=a11;
+  a12=(a12-a9);
+  if (res[1]!=0) res[1][1]=a12;
   a0=(a0+a0);
+  a2=(a2*a1);
   a0=(a0*a2);
   if (res[1]!=0) res[1][2]=a0;
   a3=(a3+a3);
+  a5=(a5*a1);
   a3=(a3*a5);
   if (res[1]!=0) res[1][3]=a3;
   a4=(a4+a4);
+  a7=(a7*a1);
   a4=(a4*a7);
   if (res[1]!=0) res[1][4]=a4;
   if (res[1]!=0) res[1][5]=a6;
@@ -134,7 +140,7 @@ int arc_solver_model_20_sparsity(int i, int *nrow, int *ncol, const int **colind
 
 int arc_solver_model_20_work(int *sz_iw, int *sz_w) {
   if (sz_iw) *sz_iw = 0;
-  if (sz_w) *sz_w = 16;
+  if (sz_w) *sz_w = 15;
   return 0;
 }
 

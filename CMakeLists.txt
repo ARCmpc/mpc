@@ -14,6 +14,19 @@ cs_add_library(${PROJECT_NAME}
 	arc_solver/arc_solver_model_1.c
 	arc_solver/arc_solver/obj_target/arc_solver.o
 ##	arc_solver/arc_solver/lib_target/libarc_solver.so
+	alglib/src/alglibinternal.cpp
+	alglib/src/alglibmisc.cpp
+	alglib/src/ap.cpp
+	alglib/src/dataanalysis.cpp
+	alglib/src/diffequations.cpp
+	alglib/src/fasttransforms.cpp
+	alglib/src/integration.cpp
+	alglib/src/interpolation.cpp
+	alglib/src/linalg.cpp
+	alglib/src/optimization.cpp
+	alglib/src/solvers.cpp
+	alglib/src/specialfunctions.cpp
+	alglib/src/statistics.cpp
 )
 #add_library(${PROJECT_NAME} OBJECT arc_solver/arc_solver/obj/arc_solver.o)
 #add_library( src/arc_mpc.cpp)
