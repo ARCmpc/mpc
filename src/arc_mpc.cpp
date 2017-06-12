@@ -24,7 +24,7 @@ std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
 //Solver constants
 float TIME_HORIZON=10;
-float SAMPLING_TIME=0.2;
+float SAMPLING_TIME=0.1;
 int N_VAR=8;
 int N_PARAM=11;	//x_ref y_ref v_ref
 int N_STEPS=20;
@@ -66,13 +66,21 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 		}
 
 	//Initialisations.
+		first_flag_=1;
 	readPathFromTxt(PATH_NAME_EDITED);
 	rest_linear_interpolation_=0;
 	obstacle_distance_=100;
 	gui_stop_=0;
+	//Clear Initial guess
+	for(int i=0;i<N_VAR*N_STEPS;i++)
+	{
+		solver_param_.x0[i]=0;
+	}
+	//Clear Array
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
+	//Clear Cluster
 	cluster_1_.flag=0;
 	cluster_2_.flag=0;
 	cluster_3_.flag=0;
@@ -345,31 +353,39 @@ void MPC::setSolverParam()	//To test
 	float z[N_STEPS*N_VAR];
 	for(int i=0; i<N_VAR;i++)
 	{
-		z[i]		 =solver_output_.x01[i];
-		z[i+1*N_VAR] =solver_output_.x02[i];
-		z[i+2*N_VAR] =solver_output_.x03[i];
-		z[i+3*N_VAR] =solver_output_.x04[i];
-		z[i+4*N_VAR] =solver_output_.x05[i];
-		z[i+5*N_VAR] =solver_output_.x06[i];
-		z[i+6*N_VAR] =solver_output_.x07[i];
-		z[i+7*N_VAR] =solver_output_.x08[i];
-		z[i+8*N_VAR] =solver_output_.x09[i];
-		z[i+9*N_VAR] =solver_output_.x10[i];
-		z[i+10*N_VAR]=solver_output_.x11[i];
-		z[i+11*N_VAR]=solver_output_.x12[i];
-		z[i+12*N_VAR]=solver_output_.x13[i];
-		z[i+13*N_VAR]=solver_output_.x14[i];
-		z[i+14*N_VAR]=solver_output_.x15[i];
-		z[i+15*N_VAR]=solver_output_.x16[i];
-		z[i+16*N_VAR]=solver_output_.x17[i];
-		z[i+17*N_VAR]=solver_output_.x18[i];
-		z[i+18*N_VAR]=solver_output_.x19[i];
+		z[i]		 =solver_output_.x02[i];
+		z[i+1*N_VAR] =solver_output_.x03[i];
+		z[i+2*N_VAR] =solver_output_.x04[i];
+		z[i+3*N_VAR] =solver_output_.x05[i];
+		z[i+4*N_VAR] =solver_output_.x06[i];
+		z[i+5*N_VAR] =solver_output_.x07[i];
+		z[i+6*N_VAR] =solver_output_.x08[i];
+		z[i+7*N_VAR] =solver_output_.x09[i];
+		z[i+8*N_VAR] =solver_output_.x10[i];
+		z[i+9*N_VAR] =solver_output_.x11[i];
+		z[i+10*N_VAR]=solver_output_.x12[i];
+		z[i+11*N_VAR]=solver_output_.x13[i];
+		z[i+12*N_VAR]=solver_output_.x14[i];
+		z[i+13*N_VAR]=solver_output_.x15[i];
+		z[i+14*N_VAR]=solver_output_.x16[i];
+		z[i+15*N_VAR]=solver_output_.x17[i];
+		z[i+16*N_VAR]=solver_output_.x18[i];
+		z[i+17*N_VAR]=solver_output_.x19[i];
+		z[i+18*N_VAR]=solver_output_.x20[i];
 		z[i+19*N_VAR]=solver_output_.x20[i];
 	}
-	for(int i=0;i<N_VAR*N_STEPS;i++)
+
+	if(first_flag_) 
 	{
-		solver_param_.x0[i]=z[i];
+		for(int i=0;i<N_VAR*N_STEPS;i++) solver_param_.x0[i]=0;
+		first_flag_=0;
+std::cout<<"FIRST TIME"<<std::endl;
 	}
+	else
+	{
+		for(int i=0;i<N_VAR*N_STEPS;i++) solver_param_.x0[i]=z[i];
+	}	
+
 	//Initial conditions
 	solver_param_.xinit[0]=0;	//initial value x-position(local)
 	solver_param_.xinit[1]=0;	//initial value y-position(local)

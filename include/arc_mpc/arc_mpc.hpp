@@ -124,6 +124,7 @@ private:
 	std_msgs::Float32MultiArray matlab_output_1_;
 	std_msgs::Float32MultiArray matlab_output_2_;
 	//Solver
+	bool first_flag_;
 	arc_solver_params solver_param_;
 	arc_solver_output solver_output_;
 	arc_solver_info solver_info_;
