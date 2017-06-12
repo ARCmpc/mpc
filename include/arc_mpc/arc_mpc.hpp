@@ -9,6 +9,7 @@
 #include "geometry_msgs/Vector3.h"
 #include "math.h"
 #include "nav_msgs/Path.h"
+#include "nav_msgs/OccupancyGrid.h"
 #include "ros/ros.h"
 #include "std_msgs/Float64.h"
 #include "std_msgs/Float32MultiArray.h"
@@ -34,7 +35,7 @@ public:
 	void obstacleCallback(const std_msgs::Float64::ConstPtr& msg);
 	void guiStopCallback(const std_msgs::Bool::ConstPtr& msg);
 	void stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incoming_state);
-	
+	void gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid_map);
 	float distanceIJ(int from_i , int to_i );
 
 	geometry_msgs::Vector3 indexOfDistanceFront(int i, float d);
@@ -63,6 +64,7 @@ public:
 	geometry_msgs::Point pointAtDistanceLinear(int i, float distance);	//summs up linearly the distance to the points and returns the exact point at certain (summed up) distance
 	float linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle);
 
+	void clustering();
 	
 private:
 	// 1. ROS setup.
@@ -76,6 +78,7 @@ private:
 	ros::Subscriber distance_to_obstacle_sub_;
 	ros::Subscriber gui_stop_sub_;
 	ros::Subscriber sub_state_matlab_;
+	ros::Subscriber grid_map_sub_;
 
 	nav_msgs::Path path_;
 	nav_msgs::Path path_diff_;
@@ -126,5 +129,19 @@ private:
 	arc_solver_info solver_info_;
 	FILE fs_;
 	arc_solver_ExtFunc pt2Function;
+	//Clustering
+	nav_msgs::OccupancyGrid obstacle_map_;
+	struct cluster
+	{
+		bool flag;		//tells if cluster is empty (0) or not (1)
+		std::vector<int> body;	//contains grid index
+		std::vector<int> temp;  //when building cluster fills with cell idices to be compared 
+	};
+	std::vector<int> all_cells_;	
+	cluster cluster_1_;
+	cluster cluster_2_;
+	cluster cluster_3_;
+	cluster cluster_4_;
+	cluster cluster_5_;
 
 };

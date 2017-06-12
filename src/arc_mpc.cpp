@@ -18,6 +18,7 @@ std::string STELLGROESSEN_TOPIC;
 std::string TRACKING_ERROR_TOPIC;
 std::string NAVIGATION_INFO_TOPIC;
 std::string STATE_TOPIC;
+std::string OBSTACLE_MAP_TOPIC;
 std::string OBSTACLE_DISTANCE_TOPIC;
 std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
@@ -48,6 +49,8 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	n->getParam("/topic/OBSTACLE_DISTANCE",OBSTACLE_DISTANCE_TOPIC);
 	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
 	n->getParam("/general/QUEUE_LENGTH",QUEUE_LENGTH );
+	n->getParam("/topic/OBSTACLE_MAP",OBSTACLE_MAP_TOPIC);
+
 	PATH_NAME_EDITED =PATH_NAME + "_teach.txt";
 	//Publisher
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>(STELLGROESSEN_TOPIC, QUEUE_LENGTH);
@@ -59,6 +62,7 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 		sub_state_ = n_->subscribe(STATE_TOPIC, QUEUE_LENGTH, &MPC::stateCallback,this);
 		distance_to_obstacle_sub_=n_->subscribe(OBSTACLE_DISTANCE_TOPIC, QUEUE_LENGTH ,&MPC::obstacleCallback,this);
 		gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&MPC::guiStopCallback,this);
+		grid_map_sub_=n_->subscribe(OBSTACLE_MAP_TOPIC, QUEUE_LENGTH, &MPC::gridmapCallback, this);
 		}
 
 	//Initialisations.
@@ -69,6 +73,22 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
+	cluster_1_.flag=0;
+	cluster_2_.flag=0;
+	cluster_3_.flag=0;
+	cluster_4_.flag=0;
+	cluster_5_.flag=0;
+	cluster_1_.body.clear();
+	cluster_1_.temp.clear();
+	cluster_2_.body.clear();
+	cluster_2_.temp.clear();
+	cluster_3_.body.clear();
+	cluster_3_.temp.clear();
+	cluster_4_.body.clear();
+	cluster_4_.temp.clear();
+	cluster_5_.body.clear();
+	cluster_5_.temp.clear();
+	all_cells_.clear();	
 //Interface to casadi
 	
 	#ifdef _cplusplus
@@ -188,6 +208,11 @@ std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
 	//END LOOP
 
+}
+
+void MPC::gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid_map)
+{
+	obstacle_map_=*grid_map;
 }
 
 void MPC::generateSpline(float lad_interpolation)
@@ -453,36 +478,7 @@ void MPC::findReferencePointsPoly()
 		j_start=j_next;
 	}
 }
-/*
-void MPC::findReferencePointsLinear()		//Filling of array for MPC solver
-{	
-	int j_temp;
-	int j=state_.current_arrayposition;
-	float v_ref=state_.pose_diff;			//v_ref_[j]; hat weniger sinn da wir eigentlich eig genau wissen wie schnell wir im ersten punkt fahren
-	float step;
-	for(int i=0; i<N_STEPS;i++)		//Where is first ref point?? at actual point or after first Ts?
-	{	
-		step=v_ref*SAMPLING_TIME-rest_linear_interpolation_;
-		j_temp=indexOfDistanceFront(j,step).x;
-		geometry_msgs::Point global;
-		geometry_msgs::Point local;
-		if(j_temp>=n_poses_path_-1) 
-		{
-			global=path_.poses[n_poses_path_-1].pose.position;
-		}	
-		else
-		{
-			global=pointAtDistanceLinear(j,step);
-		}
-		local=arc_tools::globalToLocal(global, state_);
-		ref_x_.push_back(local.x);
-		ref_y_.push_back(local.y);
-		j=j_temp; 
-		v_ref=vRef(j);
-		ref_v_.push_back(v_ref);
-	}
-}
-*/
+
 float MPC::nextReferenceXPolynomial(float x_start, float step)		//interpolates linearly at the end.
 {
 	float x_run=x_start;
@@ -740,101 +736,6 @@ void MPC::getOutputAndReact()
 	u_.speed=solver_output_.x01[4];
 	u_.acceleration=solver_output_.x01[0];
 	pub_stellgroessen_.publish(u_);
-/*	matlab_output_1_.data.clear();
-	matlab_output_1_.data.push_back(solver_output_.x01[0]);
-	matlab_output_1_.data.push_back(solver_output_.x02[0]);
-	matlab_output_1_.data.push_back(solver_output_.x03[0]);
-	matlab_output_1_.data.push_back(solver_output_.x04[0]);
-	matlab_output_1_.data.push_back(solver_output_.x05[0]);
-	matlab_output_1_.data.push_back(solver_output_.x06[0]);
-	matlab_output_1_.data.push_back(solver_output_.x07[0]);
-	matlab_output_1_.data.push_back(solver_output_.x08[0]);
-	matlab_output_1_.data.push_back(solver_output_.x09[0]);
-	pub_output_1_.publish(matlab_output_1_);
-	matlab_output_2_.data.clear();
-	matlab_output_2_.data.push_back(solver_output_.x01[1]);
-	matlab_output_2_.data.push_back(solver_output_.x02[1]);
-	matlab_output_2_.data.push_back(solver_output_.x03[1]);
-	matlab_output_2_.data.push_back(solver_output_.x04[1]);
-	matlab_output_2_.data.push_back(solver_output_.x05[1]);
-	matlab_output_2_.data.push_back(solver_output_.x06[1]);
-	matlab_output_2_.data.push_back(solver_output_.x07[1]);
-	matlab_output_2_.data.push_back(solver_output_.x08[1]);
-	matlab_output_2_.data.push_back(solver_output_.x09[1]);
-	pub_output_2_.publish(matlab_output_2_);
-
-std::cout<<"output0 "<<solver_output_.x01[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x02[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x03[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x04[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x05[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x06[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x07[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x08[0]<<std::endl;
-std::cout<<"output0 "<<solver_output_.x09[0]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output1 "<<solver_output_.x01[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x02[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x03[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x04[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x05[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x06[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x07[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x08[1]<<std::endl;
-std::cout<<"output1 "<<solver_output_.x09[1]<<std::endl;
-std::cout<<std::endl;
-
-std::cout<<"output2 "<<solver_output_.x1[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x2[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x3[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x4[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x5[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x6[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x7[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x8[2]<<std::endl;
-std::cout<<"output2 "<<solver_output_.x9[2]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output3 "<<solver_output_.x1[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x2[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x3[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x4[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x5[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x6[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x7[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x8[3]<<std::endl;
-std::cout<<"output3 "<<solver_output_.x9[3]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output4 "<<solver_output_.x1[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x2[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x3[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x4[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x5[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x6[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x7[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x8[4]<<std::endl;
-std::cout<<"output4 "<<solver_output_.x9[4]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output5 "<<solver_output_.x1[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x2[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x3[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x4[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x5[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x6[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x7[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x8[5]<<std::endl;
-std::cout<<"output5 "<<solver_output_.x9[5]<<std::endl;
-std::cout<<std::endl;
-std::cout<<"output6 "<<solver_output_.x1[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x2[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x3[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x4[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x5[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x6[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x7[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x8[6]<<std::endl;
-std::cout<<"output6 "<<solver_output_.x9[6]<<std::endl;
-std::cout<<std::endl;
-*/
 	}
 	else if(flag==0)
 	{
@@ -1005,5 +906,11 @@ alglib::spline1ddiff(c_y_,t,y,y_d,y_dd);
 curvature=fabs(x_d*y_dd-y_d*x_dd)/pow((x_d*x_d+y_d*y_d),1.5);
 std::cout<<"t "<<t<<" curvature:"<<curvature<<std::endl;
 return curvature;
+}
+
+//---------------------------------------------------------------------------------------------------------------------------
+void MPC::clustering()
+{
+
 }
 
