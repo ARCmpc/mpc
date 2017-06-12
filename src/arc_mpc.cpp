@@ -3,7 +3,7 @@
 //segmentation fault if polynomial is very wrong (b_poly=1 on gerade...)
 
 int QUEUE_LENGTH;
-float MAX_LATERAL_ACCELERATION=8;
+float MAX_LATERAL_ACCELERATION=3;
 float MAX_ABSOLUTE_VELOCITY=10;
 float K1_LAD_V=1;
 float K2_LAD_V=1;
@@ -24,7 +24,7 @@ std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
 //Solver constants
 float TIME_HORIZON=10;
-float SAMPLING_TIME=0.1;
+float SAMPLING_TIME=0.2;
 int N_VAR=8;
 int N_PARAM=11;	//x_ref y_ref v_ref
 int N_STEPS=20;
@@ -125,7 +125,7 @@ alglib::spline1dbuildlinear(x, y, s);
 
     // calculate S(0.25) - it is quite different from 0.25^2=0.0625
 v = spline1dcalc(s, t);
-std::cout<<v<<std::endl;
+std::cout<<"n_poses_path_"<<n_poses_path_<<std::endl;
 
 	geometry_msgs::Pose2D pose;
 	pose.x=0;
@@ -198,7 +198,7 @@ void MPC::stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incomin
 	ref_v_.clear();
 	//Loop
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	generateSpline(20);
+	generateSpline(40);
 std::cout<<"Spline generated "<<std::endl;
 	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
@@ -256,8 +256,12 @@ std::cout<<t_stream.str()<<std::endl<<std::endl<<x_stream.str()<<std::endl<<std:
 	s=&y_string[0];
 	y_=alglib::real_1d_array(s);
 
-	alglib::spline1dbuildcubic(t_, x_, c_x_);
-	alglib::spline1dbuildcubic(t_, y_, c_y_);
+alglib::ae_int_t info;
+alglib::spline1dfitreport rep;
+    double rho=6;
+    int M=150;
+	alglib::spline1dfitpenalized(t_, x_, M, rho, info, c_x_, rep);
+	alglib::spline1dfitpenalized(t_, y_, M, rho, info, c_y_, rep);
 
 for(int t_0=0; t_0<int(lad_interpolation); t_0++)
 {
@@ -899,8 +903,9 @@ double y_d;
 double y_dd;
 alglib::spline1ddiff(c_x_,t,x,x_d,x_dd);
 alglib::spline1ddiff(c_y_,t,y,y_d,y_dd);
-curvature=abs(x_d*y_dd-y_d*x_dd)/pow((x_d*x_d+y_d*y_d),1.5);
-return 0.1;
+curvature=fabs(x_d*y_dd-y_d*x_dd)/pow((x_d*x_d+y_d*y_d),1.5);
+std::cout<<"t "<<t<<" curvature:"<<curvature<<std::endl;
+return curvature;
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
