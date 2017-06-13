@@ -24,7 +24,7 @@ std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
 //Solver constants
 float TIME_HORIZON=10;
-float SAMPLING_TIME=0.1;
+float SAMPLING_TIME=0.2;
 int N_VAR=8;
 int N_PARAM=11;	//x_ref y_ref v_ref
 int N_STEPS=20;
@@ -50,7 +50,6 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
 	n->getParam("/general/QUEUE_LENGTH",QUEUE_LENGTH );
 	n->getParam("/topic/OBSTACLE_MAP",OBSTACLE_MAP_TOPIC);
-
 	PATH_NAME_EDITED =PATH_NAME + "_teach.txt";
 	//Publisher
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>(STELLGROESSEN_TOPIC, QUEUE_LENGTH);
@@ -109,8 +108,6 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	#ifdef _cplusplus
 	}
 	#endif 
-
-
 	
 //TEST
 std::stringstream sstr;
@@ -156,7 +153,7 @@ void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	ref_v_.clear();
 	//Loop
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	generateSpline(40);
+	generateSpline(20);
 std::cout<<"Spline generated "<<std::endl;
 	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
@@ -306,7 +303,7 @@ void MPC::findReferencePointsSpline()
 		j_end=indexOfDistanceFront(j_start,30).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
 		j_next=localPointToPathIndex(ref_point , j_start , j_end);
 		//v_ref=v_ref_[j_next];
-		v_ref=vRef(ref_point,j_start,j_end);
+		v_ref=2.5;//vRef(ref_point,j_start,j_end);
 		ref_v_.push_back(v_ref);
 
 		//Actualisation.
@@ -344,10 +341,10 @@ void MPC::setSolverParam()	//To test
 	//p(9): Weight acceleration
 	solver_param_.all_parameters[i+8]=costWeight(j)/8 *5;	////Normed on 8m/s²
 	//p(10): Weight steer
-	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*30/180) *0;	//Normed on 30 deg
+	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*30/180) *8;	//Normed on 30 deg
 //State parameter
 	//p(11): Street slope, not implemented 
-	solver_param_.all_parameters[i+10]=costWeight(j)*0;
+	solver_param_.all_parameters[i+10]=costWeight(j)*10;
 	}
 	//Initial guess
 	float z[N_STEPS*N_VAR];
@@ -587,7 +584,7 @@ void MPC::readPathFromTxt(std::string inFileName)
 
 	}
 	//Write path into txt file
-	std::string teachpoints= "/home/moritz/catkin_ws/src/arc_mpc/text/teach_global_points.txt";
+	std::string teachpoints= "/home/arcsystem/catkin_ws/src/arc_mpc/text/teach_global_points.txt";
 	std::ofstream streamteachpoints(teachpoints.c_str(), std::ios::out);
 	int i_start = 0;
 	int i_end = n_poses_path_;
@@ -618,7 +615,7 @@ float MPC::distanceIJ(int from_i , int to_i )
 
 void MPC::writeTxt()	//write for test
 {
-	std::string pointsinterpol= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
+	std::string pointsinterpol= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
 	std::ofstream streampinterp(pointsinterpol.c_str(), std::ios::out);
 	int i_start = state_.current_arrayposition;
 	int i_end = indexOfDistanceFront(i_start, INTERPOLATION_DISTANCE_FRONT).x;
@@ -632,7 +629,7 @@ void MPC::writeTxt()	//write for test
 	}
 	streampinterp.close();
 
-	std::string pointsreference= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsreference.txt";
+	std::string pointsreference= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsreference.txt";
 	std::ofstream streamprefe(pointsreference.c_str(), std::ios::out);
 	for (int i=0; i<N_STEPS; i++)
 	{
@@ -640,7 +637,7 @@ void MPC::writeTxt()	//write for test
 	}	
 	streamprefe.close();
 
-	std::string pointsplaned= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
+	std::string pointsplaned= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
 	std::ofstream streamplaned(pointsplaned.c_str(), std::ios::out);
 
 	streamplaned <<solver_output_.x01[2]<<" "<<solver_output_.x01[3]<<"\r\n";	
@@ -749,14 +746,14 @@ void MPC::getOutputAndReact()
 	{
 	//Set inputs
 	u_.steering_angle=solver_output_.x01[1];
-	u_.speed=solver_output_.x01[4];
+	u_.speed=2.5;//solver_output_.x02[4];
 	u_.acceleration=solver_output_.x01[0];
 	pub_stellgroessen_.publish(u_);
 	}
 	else if(flag==0)
 	{
 	u_.steering_angle=solver_output_.x01[1];
-	u_.speed=solver_output_.x01[4];
+	u_.speed=2.5;//solver_output_.x02[4];
 	u_.acceleration=solver_output_.x01[0];
 	pub_stellgroessen_.publish(u_);
 	std::cout<<"Timeout"<<std::endl;
