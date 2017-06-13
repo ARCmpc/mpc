@@ -27,44 +27,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 class MPC{
-
-public:
-	MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE);
-	~MPC();
-	void stateCallback(const arc_msgs::State::ConstPtr& incoming_state);
-	void obstacleCallback(const std_msgs::Float64::ConstPtr& msg);
-	void guiStopCallback(const std_msgs::Bool::ConstPtr& msg);
-	void stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incoming_state);
-	void gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid_map);
-	float distanceIJ(int from_i , int to_i );
-
-	geometry_msgs::Vector3 indexOfDistanceFront(int i, float d);
-	geometry_msgs::Vector3 indexOfDistanceBack(int i, float d);
-
-	void calculateParamFun(float lad_interpolation);
-	void generateSpline(float lad_interpolation);
-	Eigen::MatrixXd pathToMatrix(float lad);
-	void writeTxt(); 
-	float yPoly(float x);
-	float radiusPoly(float x);
-	void findReferencePointsLinear();
-	void findReferencePointsPoly();
-	void findReferencePointsSpline();
-	float nextReferenceXPolynomial(float  x_start, float step);
-	void setSolverParam();
-	float costWeight(int i);
-	void getOutputAndReact();
-	float vRef(int index);
-	float vRef(geometry_msgs::Point local, int i_start, int i_end);
-	int localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end);
-	void readPathFromTxt(std::string inFileName);
-	float curvatureSpline(float t);
-
-	geometry_msgs::Point localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_);
-	geometry_msgs::Point pointAtDistanceLinear(int i, float distance);	//summs up linearly the distance to the points and returns the exact point at certain (summed up) distance
-	float linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle);
-
-	void clustering();
 	
 private:
 	// 1. ROS setup.
@@ -73,6 +35,7 @@ private:
 	ros::Publisher pub_stellgroessen_;
 	ros::Publisher pub_output_1_;
 	ros::Publisher pub_output_2_;
+	ros::Publisher pub_clustered_grid_;
 	// Subscribers.
 	ros::Subscriber sub_state_;
 	ros::Subscriber distance_to_obstacle_sub_;
@@ -132,11 +95,18 @@ private:
 	arc_solver_ExtFunc pt2Function;
 	//Clustering
 	nav_msgs::OccupancyGrid obstacle_map_;
+	nav_msgs::OccupancyGrid clustered_map_;
+	int grid_width_;
+	int grid_height_;
+	float grid_resolution_;
 	struct cluster
 	{
 		bool flag;		//tells if cluster is empty (0) or not (1)
 		std::vector<int> body;	//contains grid index
 		std::vector<int> temp;  //when building cluster fills with cell idices to be compared 
+		float x_center;
+		float y_center;
+		float radius;
 	};
 	std::vector<int> all_cells_;	
 	cluster cluster_1_;
@@ -145,4 +115,49 @@ private:
 	cluster cluster_4_;
 	cluster cluster_5_;
 
+
+public:
+	MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE);
+	~MPC();
+	void stateCallback(const arc_msgs::State::ConstPtr& incoming_state);
+	void obstacleCallback(const std_msgs::Float64::ConstPtr& msg);
+	void guiStopCallback(const std_msgs::Bool::ConstPtr& msg);
+	void stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incoming_state);
+	void gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid_map);
+	float distanceIJ(int from_i , int to_i );
+
+	geometry_msgs::Vector3 indexOfDistanceFront(int i, float d);
+	geometry_msgs::Vector3 indexOfDistanceBack(int i, float d);
+
+	void calculateParamFun(float lad_interpolation);
+	void generateSpline(float lad_interpolation);
+	Eigen::MatrixXd pathToMatrix(float lad);
+	void writeTxt(); 
+	float yPoly(float x);
+	float radiusPoly(float x);
+	void findReferencePointsLinear();
+	void findReferencePointsPoly();
+	void findReferencePointsSpline();
+	float nextReferenceXPolynomial(float  x_start, float step);
+	void setSolverParam();
+	float costWeight(int i);
+	void getOutputAndReact();
+	float vRef(int index);
+	float vRef(geometry_msgs::Point local, int i_start, int i_end);
+	int localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end);
+	void readPathFromTxt(std::string inFileName);
+	float curvatureSpline(float t);
+
+	geometry_msgs::Point localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_);
+	geometry_msgs::Point pointAtDistanceLinear(int i, float distance);	//summs up linearly the distance to the points and returns the exact point at certain (summed up) distance
+	float linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle);
+
+	void clustering();
+	void fillCluster(cluster &actual_cluster);
+	void enframeCluster(cluster &actual_cluster);
+	void emptyCluster(cluster &actual_cluster);
+	void inflateClusterMap(cluster c);
+	int convertIndex(int x, int y);
+	geometry_msgs::Vector3 convertIndex(const int i);
+	float distanceCells(int i_1, int i_2);
 };

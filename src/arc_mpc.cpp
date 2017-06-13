@@ -14,6 +14,7 @@ float INTERPOLATION_DISTANCE_FRONT=11.47;	//Bogenlänge eines Viertelkreises mit
 float OBSTACLE_SLOW_DOWN_DISTANCE;
 float OBSTACLE_PUFFER_DISTANCE;
 float SHUT_DOWN_TIME;
+float MAX_CELL_DISTANCE_CLUSTER=0.5;
 std::string STELLGROESSEN_TOPIC;
 std::string TRACKING_ERROR_TOPIC;
 std::string NAVIGATION_INFO_TOPIC;
@@ -54,6 +55,7 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	PATH_NAME_EDITED =PATH_NAME + "_teach.txt";
 	//Publisher
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>(STELLGROESSEN_TOPIC, QUEUE_LENGTH);
+	pub_clustered_grid_=n_->advertise<nav_msgs::OccupancyGrid>("/cluster_grid",QUEUE_LENGTH);
 	pub_output_1_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_1_topic", QUEUE_LENGTH);
 	pub_output_2_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_2_topic", QUEUE_LENGTH);
 	//Subscriber
@@ -66,26 +68,25 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 		}
 
 	//Initialisations.
-		first_flag_=1;
+		first_flag_=true;
 	readPathFromTxt(PATH_NAME_EDITED);
 	rest_linear_interpolation_=0;
 	obstacle_distance_=100;
 	gui_stop_=0;
-	//Clear Initial guess
-	for(int i=0;i<N_VAR*N_STEPS;i++)
-	{
-		solver_param_.x0[i]=0;
-	}
+	//Gridmap
+	grid_width_=120;
+	grid_height_=400;
+	grid_resolution_=0.1;
 	//Clear Array
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
 	//Clear Cluster
-	cluster_1_.flag=0;
-	cluster_2_.flag=0;
-	cluster_3_.flag=0;
-	cluster_4_.flag=0;
-	cluster_5_.flag=0;
+	cluster_1_.flag=false;
+	cluster_2_.flag=false;
+	cluster_3_.flag=false;
+	cluster_4_.flag=false;
+	cluster_5_.flag=false;
 	cluster_1_.body.clear();
 	cluster_1_.temp.clear();
 	cluster_2_.body.clear();
@@ -113,35 +114,49 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 
 	
 //TEST
-std::stringstream sstr;
-sstr <<5<<" ";
-sstr<<6;
-std::cout<<sstr.str()<<std::endl;
-std::string st="[-1.0,-0.5,0.0,+0.5,+1.0]";
-char* c=&st[0];
-std::cout<<c[0]<<std::endl;
-alglib::real_1d_array x = "[-1.0,-0.5,0.0,0.5,1.0]";
-alglib::real_1d_array y = "[+1.0,0.25,0.0,0.25,+1.0]";
+obstacle_map_.info.resolution=0.1;
+obstacle_map_.info.width=120;
+obstacle_map_.info.height=400;
+geometry_msgs::Pose pose;
+pose.position.x = 0;
+pose.position.y = 0;
+pose.position.z = 0;
+pose.orientation.x = 0;
+pose.orientation.y = 0;
+pose.orientation.z = 0;
+pose.orientation.w = 1;
+obstacle_map_.info.origin = pose;
+for (int i = 0; i < (120*400); i++) {
+    obstacle_map_.data.push_back(0);
+}
+obstacle_map_.data[36060]=100;
+obstacle_map_.data[36540]=100;
+obstacle_map_.data[36544]=100;
+obstacle_map_.data[36548]=100;
+obstacle_map_.data[36552]=100;
+obstacle_map_.data[36556]=100;
+obstacle_map_.data[36550]=100;
+obstacle_map_.data[36054]=100;
 
-x=alglib::real_1d_array(c);
-double t = 0.25;
-double v;
-alglib::spline1dinterpolant s;
+float x_1=20+grid_height_/2;
+float y_1=10-grid_width_/2;
+int j=convertIndex(x_1,y_1);
+obstacle_map_.data[j]=100;
+/*obstacle_map_.data[j+3]=100;
+obstacle_map_.data[j-3]=100;
+obstacle_map_.data[j+120]=100;
+obstacle_map_.data[j-120]=100;*/
+/*for(int i=0;i<120;i++)
+{
+	obstacle_map_.data[24020+i]=100;
+	obstacle_map_.data[24260+i]=100;
+}*/
 
-    // build spline
-alglib::spline1dbuildlinear(x, y, s);
+clustering();
+for(int i=0; i<all_cells_.size();i++) std::cout<<all_cells_[i]<<std::endl;
+for(int i=0; i<cluster_1_.body.size();i++) std::cout<<cluster_1_.body[i]<<std::endl;
+enframeCluster(cluster_2_);
 
-    // calculate S(0.25) - it is quite different from 0.25^2=0.0625
-v = spline1dcalc(s, t);
-std::cout<<"n_poses_path_"<<n_poses_path_<<std::endl;
-
-	geometry_msgs::Pose2D pose;
-	pose.x=0;
-	pose.y=0;
-	pose.theta=0;
-	state_=arc_tools::generate2DState(pose);
-	state_.current_arrayposition=0;
-	generateSpline(159.2);
 //END TEST
 
 }
@@ -218,9 +233,26 @@ std::cout<<"Param setted "<<std::endl;
 
 }
 
-void MPC::gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid_map)
-{
-	obstacle_map_=*grid_map;
+void MPC::gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& incoming_gridmap)
+{	
+	float begin_time_ = ros::Time::now().toSec();
+	obstacle_map_=*incoming_gridmap;
+	grid_width_=incoming_gridmap->info.width;
+	grid_height_=incoming_gridmap->info.height;
+	grid_resolution_=incoming_gridmap->info.resolution;
+	clustering();
+	std::cout<<"TIME FOR CLUSTERING= "<<ros::Time::now().toSec()-begin_time_<<std::endl;
+	
+	//FOR RVIZ VISSUALISATION
+	clustered_map_=obstacle_map_;
+	for(int i=0; i<grid_height_*grid_width_; i++) clustered_map_.data[i]=0;
+	inflateClusterMap(cluster_1_);
+	inflateClusterMap(cluster_2_);
+	inflateClusterMap(cluster_3_);
+	inflateClusterMap(cluster_4_);
+	inflateClusterMap(cluster_5_);
+	pub_clustered_grid_.publish(clustered_map_);
+	//End RVIZ VISUALISATION
 }
 
 void MPC::generateSpline(float lad_interpolation)
@@ -378,7 +410,7 @@ void MPC::setSolverParam()	//To test
 	if(first_flag_) 
 	{
 		for(int i=0;i<N_VAR*N_STEPS;i++) solver_param_.x0[i]=0;
-		first_flag_=0;
+		first_flag_=false;
 std::cout<<"FIRST TIME"<<std::endl;
 	}
 	else
@@ -926,7 +958,162 @@ return curvature;
 
 //---------------------------------------------------------------------------------------------------------------------------
 void MPC::clustering()
-{
-
+{	
+	//Clear cluster contents
+	emptyCluster(cluster_1_);
+	emptyCluster(cluster_2_);
+	emptyCluster(cluster_3_);
+	emptyCluster(cluster_4_);
+	emptyCluster(cluster_5_);
+	//Save all occcupied intoall_cells_
+	for(int i=0; i<grid_width_*grid_height_; i++)
+	{	
+		if (obstacle_map_.data[i]==100) 	all_cells_.push_back(i);
+	}
+	//Filling Clusters
+	fillCluster(cluster_1_);
+	std::cout<<"Cluster_1 filled"<<std::endl;
+	fillCluster(cluster_2_);
+	std::cout<<"Cluster_2 filled"<<std::endl;
+	fillCluster(cluster_3_);
+	std::cout<<"Cluster_3 filled"<<std::endl;
+	fillCluster(cluster_4_);
+	std::cout<<"Cluster_4 filled"<<std::endl;
+	fillCluster(cluster_5_);
+	std::cout<<"Cluster_5 filled"<<std::endl;
+	//all_cells is really empty?
+	for(int i=0; i<all_cells_.size(); i++)
+	{
+		std::cout<<"Warning. This cell not clustered: "<<all_cells_[i]<<std::endl;
+	}
+	std::cout<<"Flag of 1= "<<cluster_1_.flag<<std::endl;
+	std::cout<<"Flag of 2= "<<cluster_2_.flag<<std::endl;
+	std::cout<<"Flag of 3= "<<cluster_3_.flag<<std::endl;
+	std::cout<<"Flag of 4= "<<cluster_4_.flag<<std::endl;
+	std::cout<<"Flag of 5= "<<cluster_5_.flag<<std::endl;
+	//Circle around cluser
+	enframeCluster(cluster_1_);
+	std::cout<<"Cluster_1 enframed"<<std::endl;
+	enframeCluster(cluster_2_);
+	std::cout<<"Cluster_2 enframed"<<std::endl;
+	enframeCluster(cluster_3_);
+	std::cout<<"Cluster_3 enframed"<<std::endl;
+	enframeCluster(cluster_4_);
+	std::cout<<"Cluster_4 enframed"<<std::endl;
+	enframeCluster(cluster_5_);
+	std::cout<<"Cluster_5 enframed"<<std::endl;
 }
 
+void MPC::fillCluster(cluster &actual_cluster)
+{
+	//Cluster 5:
+	if(!all_cells_.empty())
+	{	
+		actual_cluster.flag=true;
+		int protagonist=all_cells_.back();
+		all_cells_.pop_back();
+		actual_cluster.temp.push_back(protagonist);
+		while(!actual_cluster.temp.empty())
+		{
+			for (int i=0;i<all_cells_.size();i++)
+			{
+				if (distanceCells(protagonist,all_cells_[i])<1) 
+					{
+						actual_cluster.temp.push_back(all_cells_[i]); 
+						all_cells_.erase(all_cells_.begin()+i);
+					}
+			}
+			//Nach der Überprüfung mit allen anderen zellen geht protagonist in den body, wird von temp gelöscht und der nächte temp element ist dran
+			actual_cluster.body.push_back(protagonist);
+			std::cout<<"Cell "<<protagonist<<" is now part of cluster body"<<std::endl;
+			actual_cluster.temp.erase(actual_cluster.temp.begin());
+			protagonist=actual_cluster.temp[0];
+		}
+	}
+	else actual_cluster.flag=false;
+}
+void MPC::enframeCluster(cluster &actual_cluster)
+{	
+	double north=0;
+	double east=0;
+	double south=400;
+	double west=-120;
+	if(actual_cluster.flag==true)
+	{
+		for (int i=0; i<actual_cluster.body.size(); i++)
+		{
+			geometry_msgs::Vector3 v=convertIndex(actual_cluster.body[i]);
+			north=std::max(north,v.x);
+			south=std::min(south,v.x);
+			east=std::min(east,v.y);
+			west=std::max(west,v.y);
+		}
+		north-=grid_height_/2;
+		south-=grid_height_/2;
+		east+=grid_width_/2;
+		west+=grid_width_/2;
+		actual_cluster.x_center=grid_resolution_*(north+south)/2;
+		actual_cluster.y_center=grid_resolution_*(east+west)/2;
+		actual_cluster.radius=grid_resolution_*sqrt(pow(1+north-south,2)+pow(east-west-1,2))/2;
+	}
+	else
+	{
+		actual_cluster.x_center=1000;
+		actual_cluster.y_center=1000;
+		actual_cluster.radius=0.00001;
+	}
+	std::cout<<"x "<<actual_cluster.x_center<<" y "<<actual_cluster.y_center<<" r "<<actual_cluster.radius<<std::endl;
+}
+//CONVERT
+int MPC::convertIndex(int x, int y)
+{	
+	int n=(-y-1+grid_width_*(x-1));	
+	return n;
+}
+geometry_msgs::Vector3 MPC::convertIndex(const int i)
+{	
+	int x[2];
+	x[1]=-(i%grid_width_)-1;	//y-richtung zelle
+	x[0]=int(i/grid_width_)+1;	//x-richtung zelle
+	geometry_msgs::Vector3 p;
+	p.x=x[0];
+	p.y=x[1];
+	p.z=0;
+	return p;
+}
+float MPC::distanceCells(int i_1, int i_2)	//return distance (meter) between cells
+{
+	geometry_msgs::Vector3 p_1=convertIndex(i_1);
+	geometry_msgs::Vector3 p_2=convertIndex(i_2);
+	float distance=sqrt(pow(p_1.x-p_2.x,2)+pow(p_1.y-p_2.y,2))*grid_resolution_;
+	return distance;
+}
+void MPC::emptyCluster(cluster &actual_cluster)
+{
+	actual_cluster.flag=false;
+	actual_cluster.body.clear();
+	actual_cluster.temp.clear();
+}
+void MPC::inflateClusterMap(cluster c)
+{	
+	int x=c.x_center/grid_resolution_+grid_height_/2;
+	int y=c.y_center/grid_resolution_-grid_width_/2;
+	if((x>0) && x<grid_height_ && y<0 && (y>-grid_width_))
+	{	
+		int R=round(c.radius)/grid_resolution_;
+		for(int i=(x-R); i<=(x+R); i++)
+		{
+			for(int j=(y-R); j<=(y+R); j++)
+			{	
+				//calculates dinstance squared between (i, j) and (x, y).
+				float d=(((x-i)*(x-i))+((y-j)*(y-j)));
+				if((i>0) && (i<grid_height_) && (j<0) && j>-grid_width_ && (d<(R*R)))
+				{
+					//If (i, j) is on the map and the distance to (x,y) is smaller than the defined.
+					int q=convertIndex(i, j);
+					clustered_map_.data[q]=100;
+				}
+			}
+		}
+	}
+}
