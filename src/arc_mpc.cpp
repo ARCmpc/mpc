@@ -150,15 +150,15 @@ void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 {
 	state_ = *incoming_state;
 	v_abs_=state_.pose_diff;
-	rest_linear_interpolation_=0;
+	//Initialisation
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
-	//LOOP
+	//Loop
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	calculateParamFun(INTERPOLATION_DISTANCE_FRONT);
-std::cout<<"Param calculated "<<std::endl;
-	findReferencePointsPoly();
+	generateSpline(40);
+std::cout<<"Spline generated "<<std::endl;
+	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
 for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
 	setSolverParam();
