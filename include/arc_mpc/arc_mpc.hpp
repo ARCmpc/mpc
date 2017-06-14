@@ -73,6 +73,10 @@ private:
 	ros::Publisher pub_stellgroessen_;
 	ros::Publisher pub_output_1_;
 	ros::Publisher pub_output_2_;
+	//Rviz visualisation
+	ros::Publisher pub_past_position_;
+	ros::Publisher pub_fitted_curve_;
+	ros::Publisher pub_planed_trajectory_;
 	// Subscribers.
 	ros::Subscriber sub_state_;
 	ros::Subscriber distance_to_obstacle_sub_;
@@ -82,6 +86,11 @@ private:
 
 	nav_msgs::Path path_;
 	nav_msgs::Path path_diff_;
+
+	nav_msgs::Path past_path_;
+	nav_msgs::Path spline_path_;
+	nav_msgs::Path planed_path_;
+	
 	std::vector<float> teach_vel_;
 	std::vector<float> ref_x_;
 	std::vector<float> ref_y_;

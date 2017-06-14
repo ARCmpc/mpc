@@ -55,6 +55,11 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>(STELLGROESSEN_TOPIC, QUEUE_LENGTH);
 	pub_output_1_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_1_topic", QUEUE_LENGTH);
 	pub_output_2_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_2_topic", QUEUE_LENGTH);
+	//Rviz visualisierung
+	pub_path_ = n_->advertise<nav_msgs::Path>("/path", QUEUE_LENGTH);
+	pub_past_position_ = n_->advertise<nav_msgs::Path>("/past_positions", QUEUE_LENGTH);
+	pub_fitted_curve_ = n_->advertise<nav_msgs::Path>("/fitted_curve", QUEUE_LENGTH);
+	pub_planed_trajectory_ = n_->advertise<nav_msgs::Path>("/mpc_planning", QUEUE_LENGTH);
 	//Subscriber
 	if(MODE=="simulation") sub_state_matlab_ =n->subscribe("/state_matlab", QUEUE_LENGTH, &MPC::stateMatlabCallback,this);
 	else{
@@ -161,6 +166,7 @@ for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v
 	setSolverParam();
 std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
+	//publishRviz
 	//END LOOP
 }
 
