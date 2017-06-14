@@ -340,7 +340,7 @@ void MPC::findReferencePointsSpline()
 		//v_ref=v_ref_[j_next];
 		v_ref=vRef(ref_point,j_start,j_end);
 		ref_v_.push_back(v_ref);
-
+		//
 		//Actualisation.
 		j_start=j_next;
 	}
