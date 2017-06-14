@@ -49,6 +49,7 @@ private:
 	std::vector<float> ref_x_;
 	std::vector<float> ref_y_;
 	std::vector<float> ref_v_;
+	std::vector<float> ref_phi_;
 	int steps_in_horizon_;
 	// Number of path points.
 	int n_poses_path_;
@@ -147,6 +148,7 @@ public:
 	int localPointToPathIndex(geometry_msgs::Point p, int i_start, int i_end);
 	void readPathFromTxt(std::string inFileName);
 	float curvatureSpline(float t);
+	float phiSpline(float t);
 
 	geometry_msgs::Point localToGlobal(geometry_msgs::Point p_local, arc_msgs::State state_);
 	geometry_msgs::Point pointAtDistanceLinear(int i, float distance);	//summs up linearly the distance to the points and returns the exact point at certain (summed up) distance

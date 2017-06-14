@@ -25,7 +25,7 @@ std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
 //Solver constants
 float TIME_HORIZON=10;
-float SAMPLING_TIME=0.1;
+float SAMPLING_TIME=0.2;
 int N_VAR=8;
 int N_PARAM=11;	//x_ref y_ref v_ref
 int N_STEPS=20;
@@ -81,6 +81,7 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
+	ref_phi_.clear();
 	//Clear Cluster
 	cluster_1_.flag=false;
 	cluster_2_.flag=false;
@@ -169,13 +170,14 @@ void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
+	ref_phi_.clear();
 	//LOOP
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	calculateParamFun(INTERPOLATION_DISTANCE_FRONT);
-std::cout<<"Param calculated "<<std::endl;
-	findReferencePointsPoly();
+	generateSpline(20);
+std::cout<<"Spline generated "<<std::endl;
+	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
-for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
+for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" phi-ref: "<<ref_phi_[i]<<std::endl;
 	setSolverParam();
 std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
@@ -219,9 +221,10 @@ void MPC::stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incomin
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
+	ref_phi_.clear();
 	//Loop
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	generateSpline(40);
+	generateSpline(20);
 std::cout<<"Spline generated "<<std::endl;
 	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
@@ -340,7 +343,8 @@ void MPC::findReferencePointsSpline()
 		//v_ref=v_ref_[j_next];
 		v_ref=vRef(ref_point,j_start,j_end);
 		ref_v_.push_back(v_ref);
-		//
+		//Find reference orientation
+		ref_phi_.push_back(phiSpline(t_curr));
 		//Actualisation.
 		j_start=j_next;
 	}
@@ -361,14 +365,14 @@ void MPC::setSolverParam()	//To test
 	//p(2): Reference y
 	solver_param_.all_parameters[i+1]=ref_y_[j];
 	//p(3): Reference v
-	solver_param_.all_parameters[i+2]=ref_v_[j];
+	solver_param_.all_parameters[i+2]=ref_phi_[j];
 //Cost weights
 	//p(4): Weight dx
 	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *1;	//Nermed on 1m
 	//p(5): Weight dy
 	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *1; //Nermed on 1m
-	//p(6): Weight dv
-	solver_param_.all_parameters[i+5]=costWeight(j)/5 *0;	//Normed on 5m/s
+	//p(6): Weight dphi
+	solver_param_.all_parameters[i+5]=costWeight(j)/ (M_PI*30/180)*10;	//Normed on 30 deg
 	//p(7): Weight change of acceleration
 	solver_param_.all_parameters[i+6]=costWeight(j)/8 *100;	//Normed on 8m/s²
 	//p(8): Weight change of steer
@@ -954,6 +958,22 @@ alglib::spline1ddiff(c_y_,t,y,y_d,y_dd);
 curvature=fabs(x_d*y_dd-y_d*x_dd)/pow((x_d*x_d+y_d*y_d),1.5);
 std::cout<<"t "<<t<<" curvature:"<<curvature<<std::endl;
 return curvature;
+}
+
+float MPC::phiSpline(float t)
+{
+float phi;
+double x;
+double x_d;
+double x_dd;
+double y;
+double y_d;
+double y_dd;
+alglib::spline1ddiff(c_x_,t,x,x_d,x_dd);
+alglib::spline1ddiff(c_y_,t,y,y_d,y_dd);
+phi=atan2(y_d,x_d);
+std::cout<<"Phi at = "<<t<<" = "<<phi*180/M_PI<<std::endl;
+return phi;
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
