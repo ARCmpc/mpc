@@ -177,7 +177,7 @@ std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
 std::cout<<"Spline generated "<<std::endl;
 	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
-for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" phi-ref: "<<ref_phi_[i]<<std::endl;
+for(int i=0;i<N_STEPS;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" phi-ref: "<<ref_phi_[i]<<std::endl;
 	setSolverParam();
 std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
@@ -301,7 +301,7 @@ std::cout<<t_stream.str()<<std::endl<<std::endl<<x_stream.str()<<std::endl<<std:
 
 alglib::ae_int_t info;
 alglib::spline1dfitreport rep;
-    double rho=6;
+    double rho=5;
     int M=150;
 	alglib::spline1dfitpenalized(t_, x_, M, rho, info, c_x_, rep);
 	alglib::spline1dfitpenalized(t_, y_, M, rho, info, c_y_, rep);
@@ -316,7 +316,7 @@ for(int t_0=0; t_0<int(lad_interpolation); t_0++)
 void MPC::findReferencePointsSpline()
 {
 	float t_curr=0;
-	float v_ref=state_.pose_diff;	//first reference velocity is actual velocity
+	float v_ref=v_abs_;//state_.pose_diff;	//first reference velocity is actual velocity
 	//Integers there to keep track of position in path. So to read out proper v_ref[].	
 	float step;		//Meters to next ref_point
 	int j_start=state_.current_arrayposition;
@@ -368,19 +368,19 @@ void MPC::setSolverParam()	//To test
 	solver_param_.all_parameters[i+2]=ref_phi_[j];
 //Cost weights
 	//p(4): Weight dx
-	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *1;	//Nermed on 1m
+	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *2;	//Nermed on 0.5m
 	//p(5): Weight dy
-	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *1; //Nermed on 1m
+	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *2; //Nermed on 0.5m
 	//p(6): Weight dphi
-	solver_param_.all_parameters[i+5]=costWeight(j)/ (M_PI*30/180)*10;	//Normed on 30 deg
+	solver_param_.all_parameters[i+5]=costWeight(j)/ (M_PI*10/180)*4;	//Normed on 10 deg
 	//p(7): Weight change of acceleration
-	solver_param_.all_parameters[i+6]=costWeight(j)/8 *100;	//Normed on 8m/s²
+	solver_param_.all_parameters[i+6]=costWeight(j)/0.1 *2;	//Normed on 0.1m/s² (pro schritt!)
 	//p(8): Weight change of steer
-	solver_param_.all_parameters[i+7]=costWeight(j)/(M_PI*30/180) *100;	//Normed on 30 deg
+	solver_param_.all_parameters[i+7]=costWeight(j)/(M_PI*3/180) *20;	//Normed on 3 deg (pro schritt!)
 	//p(9): Weight acceleration
-	solver_param_.all_parameters[i+8]=costWeight(j)/8 *5;	////Normed on 8m/s²
+	solver_param_.all_parameters[i+8]=costWeight(j)/8 *1;	////Normed on 8m/s²
 	//p(10): Weight steer
-	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*30/180) *0;	//Normed on 30 deg
+	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*10/180) *4;	//Normed on 10 deg
 //State parameter
 	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=costWeight(j)*0;
@@ -675,6 +675,14 @@ void MPC::writeTxt()	//write for test
 		streamprefe <<ref_x_[i]<<" "<<ref_y_[i]<<"\r\n";
 	}	
 	streamprefe.close();
+
+	std::string pointsspline= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsspline.txt";
+	std::ofstream streampspline(pointsspline.c_str(), std::ios::out);
+	for (float i=0; i<15; i+=0.8)
+	{
+		streampspline <<spline1dcalc(c_x_, i)<<" "<<spline1dcalc(c_y_, i)<<"\r\n";
+	}	
+	streampspline.close();
 
 	std::string pointsplaned= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
 	std::ofstream streamplaned(pointsplaned.c_str(), std::ios::out);
