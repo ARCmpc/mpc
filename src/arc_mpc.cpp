@@ -619,7 +619,7 @@ float MPC::distanceIJ(int from_i , int to_i )
 
 }
 
-void MPC::writeTxt()	//write for test
+void MPC::writeTxt()	//write for test and safe paths
 {
 	std::string pointsinterpol= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
 	std::ofstream streampinterp(pointsinterpol.c_str(), std::ios::out);
@@ -642,6 +642,15 @@ void MPC::writeTxt()	//write for test
 		streamprefe <<ref_x_[i]<<" "<<ref_y_[i]<<"\r\n";
 	}	
 	streamprefe.close();
+
+	std::string pointsspline= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsspline.txt";
+	std::ofstream streampspline(pointsspline.c_str(), std::ios::out);
+	for (float i=0; i<15; i+=0.8)
+	{
+		streampspline <<spline1dcalc(c_x_, i)<<" "<<spline1dcalc(c_y_, i)<<"\r\n";
+		geometry_msgs::PoseStamped temp_pose;
+	}	
+	streampspline.close();
 
 	std::string pointsplaned= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
 	std::ofstream streamplaned(pointsplaned.c_str(), std::ios::out);
