@@ -101,6 +101,13 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	cluster_5_.body.clear();
 	cluster_5_.temp.clear();
 	all_cells_.clear();	
+	//Frame id for Rviz visualisation
+	path_.header.frame_id="map";
+	fitted_path_.header.frame_id="map";
+	planed_path_.header.frame_id="map";
+	past_path_.poses.clear();
+	past_path_.header.frame_id="map";
+
 //Interface to casadi
 	
 	#ifdef _cplusplus
@@ -151,7 +158,7 @@ std::cout<<"n_poses_path_"<<n_poses_path_<<std::endl;
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 {
 	state_ = *incoming_state;
-	v_abs_=state_.pose_diff;
+	v_abs_=6;//state_.pose_diff;
 	//Initialisation
 	ref_x_.clear();
 	ref_y_.clear();
@@ -167,6 +174,9 @@ for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v
 std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
 	//publishRviz
+	pub_path_.publish(path_);
+	pub_fitted_curve_.publish(fitted_path_);
+	pub_planed_trajectory_.publish(planed_path_);
 	//END LOOP
 }
 
@@ -309,7 +319,7 @@ void MPC::findReferencePointsSpline()
 		j_end=indexOfDistanceFront(j_start,30).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
 		j_next=localPointToPathIndex(ref_point , j_start , j_end);
 		//v_ref=v_ref_[j_next];
-		v_ref=2.5;//vRef(ref_point,j_start,j_end);
+		v_ref=6;//vRef(ref_point,j_start,j_end);
 		ref_v_.push_back(v_ref);
 
 		//Actualisation.
@@ -590,7 +600,7 @@ void MPC::readPathFromTxt(std::string inFileName)
 
 	}
 	//Write path into txt file
-	std::string teachpoints= "/home/arcsystem/catkin_ws/src/arc_mpc/text/teach_global_points.txt";
+	std::string teachpoints= "/home/moritz/catkin_ws/src/arc_mpc/text/teach_global_points.txt";
 	std::ofstream streamteachpoints(teachpoints.c_str(), std::ios::out);
 	int i_start = 0;
 	int i_end = n_poses_path_;
@@ -621,7 +631,10 @@ float MPC::distanceIJ(int from_i , int to_i )
 
 void MPC::writeTxt()	//write for test and safe paths
 {
-	std::string pointsinterpol= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
+	//Past
+	past_path_.poses.push_back(state_.pose);
+	//Future
+	std::string pointsinterpol= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
 	std::ofstream streampinterp(pointsinterpol.c_str(), std::ios::out);
 	int i_start = state_.current_arrayposition;
 	int i_end = indexOfDistanceFront(i_start, INTERPOLATION_DISTANCE_FRONT).x;
@@ -634,25 +647,34 @@ void MPC::writeTxt()	//write for test and safe paths
 	           p.y<<"\r\n";
 	}
 	streampinterp.close();
-
-	std::string pointsreference= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsreference.txt";
+	//Reference
+	std::string pointsreference= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsreference.txt";
 	std::ofstream streamprefe(pointsreference.c_str(), std::ios::out);
 	for (int i=0; i<N_STEPS; i++)
 	{
 		streamprefe <<ref_x_[i]<<" "<<ref_y_[i]<<"\r\n";
 	}	
 	streamprefe.close();
-
+	//Interpolated
 	std::string pointsspline= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsspline.txt";
 	std::ofstream streampspline(pointsspline.c_str(), std::ios::out);
-	for (float i=0; i<15; i+=0.8)
+	fitted_path_.poses.clear();
+	for (float i=0; i<20; i+=0.8)
 	{
-		streampspline <<spline1dcalc(c_x_, i)<<" "<<spline1dcalc(c_y_, i)<<"\r\n";
+		float x=spline1dcalc(c_x_, i);
+		float y=spline1dcalc(c_y_, i);
+		streampspline <<x<<" "<<y<<"\r\n";
+		geometry_msgs::Point p;
+		p.x=x;
+		p.y=y;
+		p.z=0;
 		geometry_msgs::PoseStamped temp_pose;
+		temp_pose.pose.position=localToGlobal(p,state_);
+		fitted_path_.poses.push_back(temp_pose);
 	}	
 	streampspline.close();
-
-	std::string pointsplaned= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
+	//Planed
+	std::string pointsplaned= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
 	std::ofstream streamplaned(pointsplaned.c_str(), std::ios::out);
 
 	streamplaned <<solver_output_.x01[2]<<" "<<solver_output_.x01[3]<<"\r\n";	
@@ -676,9 +698,112 @@ void MPC::writeTxt()	//write for test and safe paths
 	streamplaned <<solver_output_.x19[2]<<" "<<solver_output_.x19[3]<<"\r\n";	
 	streamplaned <<solver_output_.x20[2]<<" "<<solver_output_.x20[3]<<"\r\n";
 	streamplaned.close();
-	
-	std::cout<<"writeTxt: "<<"f(x)="<<poly_a_<<"*x*x*x+"<<poly_b_<<"*x*x+"<<poly_c_<<"*x+"<<poly_d_<<std::endl;
+	planed_path_.poses.clear();
+	{
+		geometry_msgs::PoseStamped temp_pose;
+		geometry_msgs::Point p;
+		p.z=0;
 
+		p.x=solver_output_.x01[2];
+		p.y=solver_output_.x01[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x02[2];
+		p.y=solver_output_.x02[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x03[2];
+		p.y=solver_output_.x03[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x04[2];
+		p.y=solver_output_.x04[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x05[2];
+		p.y=solver_output_.x05[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x06[2];
+		p.y=solver_output_.x06[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x07[2];
+		p.y=solver_output_.x07[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x08[2];
+		p.y=solver_output_.x08[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x09[2];
+		p.y=solver_output_.x09[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x10[2];
+		p.y=solver_output_.x10[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x11[2];
+		p.y=solver_output_.x11[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x12[2];
+		p.y=solver_output_.x12[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x13[2];
+		p.y=solver_output_.x13[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x14[2];
+		p.y=solver_output_.x14[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x15[2];
+		p.y=solver_output_.x15[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x16[2];
+		p.y=solver_output_.x16[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x17[2];
+		p.y=solver_output_.x17[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x18[2];
+		p.y=solver_output_.x18[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x19[2];
+		p.y=solver_output_.x19[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+
+		p.x=solver_output_.x20[2];
+		p.y=solver_output_.x20[3];
+		temp_pose.pose.position=localToGlobal(p,state_);
+		planed_path_.poses.push_back(temp_pose);
+	}
 }
 
 Eigen::MatrixXd MPC::pathToMatrix(float lad)  //Let's see
@@ -942,3 +1067,9 @@ void MPC::clustering()
 
 }
 
+void MPC::crateFrameId()
+{
+    odom_trans.header.stamp = ros::Time::now();
+    odom_trans.header.frame_id = "odom";
+    odom_trans.child_frame_id = "base_link";
+}

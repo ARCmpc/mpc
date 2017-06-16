@@ -7,6 +7,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/Vector3.h"
+#include "geometry_msgs/TransformStamped.h"
 #include "math.h"
 #include "nav_msgs/Path.h"
 #include "nav_msgs/OccupancyGrid.h"
@@ -36,6 +37,15 @@ private:
 	ros::Publisher pub_output_1_;
 	ros::Publisher pub_output_2_;
 	ros::Publisher pub_clustered_grid_;
+	//Rviz visualisation;
+	geometry_msgs::TransformStamped odom_trans;
+	ros::Publisher pub_path_ ;
+	ros::Publisher pub_past_position_ ;
+	ros::Publisher pub_fitted_curve_ ;
+	ros::Publisher pub_planed_trajectory_ ;
+	nav_msgs::Path past_path_;
+	nav_msgs::Path fitted_path_;
+	nav_msgs::Path planed_path_;
 	// Subscribers.
 	ros::Subscriber sub_state_;
 	ros::Subscriber distance_to_obstacle_sub_;
@@ -162,4 +172,6 @@ public:
 	int convertIndex(int x, int y);
 	geometry_msgs::Vector3 convertIndex(const int i);
 	float distanceCells(int i_1, int i_2);
+	//Rviz visualisation
+	void crateFrameId();
 };
