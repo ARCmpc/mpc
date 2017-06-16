@@ -268,7 +268,7 @@ void MPC::gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& incoming_grid
 	inflateClusterMap(cluster_4_);
 	inflateClusterMap(cluster_5_);
 	pub_clustered_grid_.publish(clustered_map_);
-	//End RVIZ VISUALISATION
+	//End RVIZ VISUALISATIO
 }
 
 void MPC::generateSpline(float lad_interpolation)
