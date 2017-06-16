@@ -14,6 +14,7 @@ float INTERPOLATION_DISTANCE_FRONT=11.47;	//Bogenlänge eines Viertelkreises mit
 float OBSTACLE_SLOW_DOWN_DISTANCE;
 float OBSTACLE_PUFFER_DISTANCE;
 float SHUT_DOWN_TIME;
+float MAX_CELL_DISTANCE_CLUSTER=0.5;
 std::string STELLGROESSEN_TOPIC;
 std::string TRACKING_ERROR_TOPIC;
 std::string NAVIGATION_INFO_TOPIC;
@@ -53,6 +54,7 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	PATH_NAME_EDITED =PATH_NAME + "_teach.txt";
 	//Publisher
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>(STELLGROESSEN_TOPIC, QUEUE_LENGTH);
+	pub_clustered_grid_=n_->advertise<nav_msgs::OccupancyGrid>("/cluster_grid",QUEUE_LENGTH);
 	pub_output_1_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_1_topic", QUEUE_LENGTH);
 	pub_output_2_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_2_topic", QUEUE_LENGTH);
 	//Rviz visualisierung
@@ -70,26 +72,26 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 		}
 
 	//Initialisations.
-		first_flag_=1;
+		first_flag_=true;
 	readPathFromTxt(PATH_NAME_EDITED);
 	rest_linear_interpolation_=0;
 	obstacle_distance_=100;
 	gui_stop_=0;
-	//Clear Initial guess
-	for(int i=0;i<N_VAR*N_STEPS;i++)
-	{
-		solver_param_.x0[i]=0;
-	}
+	//Gridmap
+	grid_width_=120;
+	grid_height_=400;
+	grid_resolution_=0.1;
 	//Clear Array
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
+	ref_phi_.clear();
 	//Clear Cluster
-	cluster_1_.flag=0;
-	cluster_2_.flag=0;
-	cluster_3_.flag=0;
-	cluster_4_.flag=0;
-	cluster_5_.flag=0;
+	cluster_1_.flag=false;
+	cluster_2_.flag=false;
+	cluster_3_.flag=false;
+	cluster_4_.flag=false;
+	cluster_5_.flag=false;
 	cluster_1_.body.clear();
 	cluster_1_.temp.clear();
 	cluster_2_.body.clear();
@@ -122,35 +124,49 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	#endif 
 	
 //TEST
-std::stringstream sstr;
-sstr <<5<<" ";
-sstr<<6;
-std::cout<<sstr.str()<<std::endl;
-std::string st="[-1.0,-0.5,0.0,+0.5,+1.0]";
-char* c=&st[0];
-std::cout<<c[0]<<std::endl;
-alglib::real_1d_array x = "[-1.0,-0.5,0.0,0.5,1.0]";
-alglib::real_1d_array y = "[+1.0,0.25,0.0,0.25,+1.0]";
+obstacle_map_.info.resolution=0.1;
+obstacle_map_.info.width=120;
+obstacle_map_.info.height=400;
+geometry_msgs::Pose pose;
+pose.position.x = 0;
+pose.position.y = 0;
+pose.position.z = 0;
+pose.orientation.x = 0;
+pose.orientation.y = 0;
+pose.orientation.z = 0;
+pose.orientation.w = 1;
+obstacle_map_.info.origin = pose;
+for (int i = 0; i < (120*400); i++) {
+    obstacle_map_.data.push_back(0);
+}
+obstacle_map_.data[36060]=100;
+obstacle_map_.data[36540]=100;
+obstacle_map_.data[36544]=100;
+obstacle_map_.data[36548]=100;
+obstacle_map_.data[36552]=100;
+obstacle_map_.data[36556]=100;
+obstacle_map_.data[36550]=100;
+obstacle_map_.data[36054]=100;
 
-x=alglib::real_1d_array(c);
-double t = 0.25;
-double v;
-alglib::spline1dinterpolant s;
+float x_1=20+grid_height_/2;
+float y_1=10-grid_width_/2;
+int j=convertIndex(x_1,y_1);
+obstacle_map_.data[j]=100;
+/*obstacle_map_.data[j+3]=100;
+obstacle_map_.data[j-3]=100;
+obstacle_map_.data[j+120]=100;
+obstacle_map_.data[j-120]=100;*/
+/*for(int i=0;i<120;i++)
+{
+	obstacle_map_.data[24020+i]=100;
+	obstacle_map_.data[24260+i]=100;
+}*/
 
-    // build spline
-alglib::spline1dbuildlinear(x, y, s);
+clustering();
+for(int i=0; i<all_cells_.size();i++) std::cout<<all_cells_[i]<<std::endl;
+for(int i=0; i<cluster_1_.body.size();i++) std::cout<<cluster_1_.body[i]<<std::endl;
+enframeCluster(cluster_2_);
 
-    // calculate S(0.25) - it is quite different from 0.25^2=0.0625
-v = spline1dcalc(s, t);
-std::cout<<"n_poses_path_"<<n_poses_path_<<std::endl;
-
-	geometry_msgs::Pose2D pose;
-	pose.x=0;
-	pose.y=0;
-	pose.theta=0;
-	state_=arc_tools::generate2DState(pose);
-	state_.current_arrayposition=0;
-	generateSpline(159.2);
 //END TEST
 
 }
@@ -163,13 +179,14 @@ void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
-	//Loop
+	ref_phi_.clear();
+	//LOOP
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
 	generateSpline(20);
 std::cout<<"Spline generated "<<std::endl;
 	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
-for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
+for(int i=0;i<N_STEPS;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" phi-ref: "<<ref_phi_[i]<<std::endl;
 	setSolverParam();
 std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
@@ -217,9 +234,10 @@ void MPC::stateMatlabCallback(const geometry_msgs::Quaternion::ConstPtr& incomin
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
+	ref_phi_.clear();
 	//Loop
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	generateSpline(40);
+	generateSpline(20);
 std::cout<<"Spline generated "<<std::endl;
 	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
@@ -231,9 +249,26 @@ std::cout<<"Param setted "<<std::endl;
 
 }
 
-void MPC::gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& grid_map)
-{
-	obstacle_map_=*grid_map;
+void MPC::gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& incoming_gridmap)
+{	
+	float begin_time_ = ros::Time::now().toSec();
+	obstacle_map_=*incoming_gridmap;
+	grid_width_=incoming_gridmap->info.width;
+	grid_height_=incoming_gridmap->info.height;
+	grid_resolution_=incoming_gridmap->info.resolution;
+	clustering();
+	std::cout<<"TIME FOR CLUSTERING= "<<ros::Time::now().toSec()-begin_time_<<std::endl;
+	
+	//FOR RVIZ VISSUALISATION
+	clustered_map_=obstacle_map_;
+	for(int i=0; i<grid_height_*grid_width_; i++) clustered_map_.data[i]=0;
+	inflateClusterMap(cluster_1_);
+	inflateClusterMap(cluster_2_);
+	inflateClusterMap(cluster_3_);
+	inflateClusterMap(cluster_4_);
+	inflateClusterMap(cluster_5_);
+	pub_clustered_grid_.publish(clustered_map_);
+	//End RVIZ VISUALISATION
 }
 
 void MPC::generateSpline(float lad_interpolation)
@@ -279,7 +314,7 @@ std::cout<<t_stream.str()<<std::endl<<std::endl<<x_stream.str()<<std::endl<<std:
 
 alglib::ae_int_t info;
 alglib::spline1dfitreport rep;
-    double rho=6;
+    double rho=5;
     int M=150;
 	alglib::spline1dfitpenalized(t_, x_, M, rho, info, c_x_, rep);
 	alglib::spline1dfitpenalized(t_, y_, M, rho, info, c_y_, rep);
@@ -294,7 +329,7 @@ for(int t_0=0; t_0<int(lad_interpolation); t_0++)
 void MPC::findReferencePointsSpline()
 {
 	float t_curr=0;
-	float v_ref=state_.pose_diff;	//first reference velocity is actual velocity
+	float v_ref=v_abs_;//state_.pose_diff;	//first reference velocity is actual velocity
 	//Integers there to keep track of position in path. So to read out proper v_ref[].	
 	float step;		//Meters to next ref_point
 	int j_start=state_.current_arrayposition;
@@ -321,7 +356,8 @@ void MPC::findReferencePointsSpline()
 		//v_ref=v_ref_[j_next];
 		v_ref=6;//vRef(ref_point,j_start,j_end);
 		ref_v_.push_back(v_ref);
-
+		//Find reference orientation
+		ref_phi_.push_back(phiSpline(t_curr));
 		//Actualisation.
 		j_start=j_next;
 	}
@@ -341,26 +377,26 @@ void MPC::setSolverParam()	//To test
 	solver_param_.all_parameters[i]=ref_x_[j];
 	//p(2): Reference y
 	solver_param_.all_parameters[i+1]=ref_y_[j];
-	//p(3): Reference v
-	solver_param_.all_parameters[i+2]=ref_v_[j];
+	//p(3): Reference phi
+	solver_param_.all_parameters[i+2]=ref_phi_[j];
 //Cost weights
 	//p(4): Weight dx
-	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *1;	//Nermed on 1m
+	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *4;	//Nermed on 0.5m
 	//p(5): Weight dy
-	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *1; //Nermed on 1m
-	//p(6): Weight dv
-	solver_param_.all_parameters[i+5]=costWeight(j)/5 *0;	//Normed on 5m/s
+	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *4; //Nermed on 0.5m
+	//p(6): Weight dphi
+	solver_param_.all_parameters[i+5]=costWeight(j)/ (M_PI*10/180)*8;	//Normed on 10 deg
 	//p(7): Weight change of acceleration
-	solver_param_.all_parameters[i+6]=costWeight(j)/8 *100;	//Normed on 8m/s²
+	solver_param_.all_parameters[i+6]=costWeight(j)/0.1 *2;	//Normed on 0.1m/s² (pro schritt!)
 	//p(8): Weight change of steer
-	solver_param_.all_parameters[i+7]=costWeight(j)/(M_PI*30/180) *100;	//Normed on 30 deg
+	solver_param_.all_parameters[i+7]=costWeight(j)/(M_PI*3/180) *24;	//Normed on 3 deg (pro schritt!)
 	//p(9): Weight acceleration
-	solver_param_.all_parameters[i+8]=costWeight(j)/8 *5;	////Normed on 8m/s²
+	solver_param_.all_parameters[i+8]=costWeight(j)/8 *1;	////Normed on 8m/s²
 	//p(10): Weight steer
-	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*30/180) *8;	//Normed on 30 deg
+	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*10/180) *100;	//Normed on 10 deg
 //State parameter
 	//p(11): Street slope, not implemented 
-	solver_param_.all_parameters[i+10]=costWeight(j)*10;
+	solver_param_.all_parameters[i+10]=costWeight(j)*0;
 	}
 	//Initial guess
 	float z[N_STEPS*N_VAR];
@@ -391,7 +427,7 @@ void MPC::setSolverParam()	//To test
 	if(first_flag_) 
 	{
 		for(int i=0;i<N_VAR*N_STEPS;i++) solver_param_.x0[i]=0;
-		first_flag_=0;
+		first_flag_=false;
 std::cout<<"FIRST TIME"<<std::endl;
 	}
 	else
@@ -600,7 +636,7 @@ void MPC::readPathFromTxt(std::string inFileName)
 
 	}
 	//Write path into txt file
-	std::string teachpoints= "/home/moritz/catkin_ws/src/arc_mpc/text/teach_global_points.txt";
+	std::string teachpoints= "/home/arcsystem/catkin_ws/src/arc_mpc/text/teach_global_points.txt";
 	std::ofstream streamteachpoints(teachpoints.c_str(), std::ios::out);
 	int i_start = 0;
 	int i_end = n_poses_path_;
@@ -647,6 +683,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	           p.y<<"\r\n";
 	}
 	streampinterp.close();
+
 	//Reference
 	std::string pointsreference= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsreference.txt";
 	std::ofstream streamprefe(pointsreference.c_str(), std::ios::out);
@@ -655,6 +692,7 @@ void MPC::writeTxt()	//write for test and safe paths
 		streamprefe <<ref_x_[i]<<" "<<ref_y_[i]<<"\r\n";
 	}	
 	streamprefe.close();
+
 	//Interpolated
 	std::string pointsspline= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsspline.txt";
 	std::ofstream streampspline(pointsspline.c_str(), std::ios::out);
@@ -673,6 +711,7 @@ void MPC::writeTxt()	//write for test and safe paths
 		fitted_path_.poses.push_back(temp_pose);
 	}	
 	streampspline.close();
+  
 	//Planed
 	std::string pointsplaned= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
 	std::ofstream streamplaned(pointsplaned.c_str(), std::ios::out);
@@ -886,7 +925,7 @@ void MPC::getOutputAndReact()
 	{
 	//Set inputs
 	u_.steering_angle=solver_output_.x01[1];
-	u_.speed=2.5;//solver_output_.x02[4];
+	u_.speed=6;//solver_output_.x01[4];
 	u_.acceleration=solver_output_.x01[0];
 	pub_stellgroessen_.publish(u_);
 	}
@@ -1061,15 +1100,180 @@ std::cout<<"t "<<t<<" curvature:"<<curvature<<std::endl;
 return curvature;
 }
 
-//---------------------------------------------------------------------------------------------------------------------------
-void MPC::clustering()
+float MPC::phiSpline(float t)
 {
-
+float phi;
+double x;
+double x_d;
+double x_dd;
+double y;
+double y_d;
+double y_dd;
+alglib::spline1ddiff(c_x_,t,x,x_d,x_dd);
+alglib::spline1ddiff(c_y_,t,y,y_d,y_dd);
+phi=atan2(y_d,x_d);
+std::cout<<"Phi at = "<<t<<" = "<<phi*180/M_PI<<std::endl;
+return phi;
 }
 
-void MPC::crateFrameId()
+//---------------------------------------------------------------------------------------------------------------------------
+void MPC::clustering()
+{	
+	//Clear cluster contents
+	emptyCluster(cluster_1_);
+	emptyCluster(cluster_2_);
+	emptyCluster(cluster_3_);
+	emptyCluster(cluster_4_);
+	emptyCluster(cluster_5_);
+	//Save all occcupied intoall_cells_
+	for(int i=0; i<grid_width_*grid_height_; i++)
+	{	
+		if (obstacle_map_.data[i]==100) 	all_cells_.push_back(i);
+	}
+	//Filling Clusters
+	fillCluster(cluster_1_);
+	std::cout<<"Cluster_1 filled"<<std::endl;
+	fillCluster(cluster_2_);
+	std::cout<<"Cluster_2 filled"<<std::endl;
+	fillCluster(cluster_3_);
+	std::cout<<"Cluster_3 filled"<<std::endl;
+	fillCluster(cluster_4_);
+	std::cout<<"Cluster_4 filled"<<std::endl;
+	fillCluster(cluster_5_);
+	std::cout<<"Cluster_5 filled"<<std::endl;
+	//all_cells is really empty?
+	for(int i=0; i<all_cells_.size(); i++)
+	{
+		std::cout<<"Warning. This cell not clustered: "<<all_cells_[i]<<std::endl;
+	}
+	std::cout<<"Flag of 1= "<<cluster_1_.flag<<std::endl;
+	std::cout<<"Flag of 2= "<<cluster_2_.flag<<std::endl;
+	std::cout<<"Flag of 3= "<<cluster_3_.flag<<std::endl;
+	std::cout<<"Flag of 4= "<<cluster_4_.flag<<std::endl;
+	std::cout<<"Flag of 5= "<<cluster_5_.flag<<std::endl;
+	//Circle around cluser
+	enframeCluster(cluster_1_);
+	std::cout<<"Cluster_1 enframed"<<std::endl;
+	enframeCluster(cluster_2_);
+	std::cout<<"Cluster_2 enframed"<<std::endl;
+	enframeCluster(cluster_3_);
+	std::cout<<"Cluster_3 enframed"<<std::endl;
+	enframeCluster(cluster_4_);
+	std::cout<<"Cluster_4 enframed"<<std::endl;
+	enframeCluster(cluster_5_);
+	std::cout<<"Cluster_5 enframed"<<std::endl;
+}
+
+void MPC::fillCluster(cluster &actual_cluster)
 {
-    odom_trans.header.stamp = ros::Time::now();
-    odom_trans.header.frame_id = "odom";
-    odom_trans.child_frame_id = "base_link";
+	//Cluster 5:
+	if(!all_cells_.empty())
+	{	
+		actual_cluster.flag=true;
+		int protagonist=all_cells_.back();
+		all_cells_.pop_back();
+		actual_cluster.temp.push_back(protagonist);
+		while(!actual_cluster.temp.empty())
+		{
+			for (int i=0;i<all_cells_.size();i++)
+			{
+				if (distanceCells(protagonist,all_cells_[i])<1) 
+					{
+						actual_cluster.temp.push_back(all_cells_[i]); 
+						all_cells_.erase(all_cells_.begin()+i);
+					}
+			}
+			//Nach der Überprüfung mit allen anderen zellen geht protagonist in den body, wird von temp gelöscht und der nächte temp element ist dran
+			actual_cluster.body.push_back(protagonist);
+			std::cout<<"Cell "<<protagonist<<" is now part of cluster body"<<std::endl;
+			actual_cluster.temp.erase(actual_cluster.temp.begin());
+			protagonist=actual_cluster.temp[0];
+		}
+	}
+	else actual_cluster.flag=false;
+}
+void MPC::enframeCluster(cluster &actual_cluster)
+{	
+	double north=0;
+	double east=0;
+	double south=400;
+	double west=-120;
+	if(actual_cluster.flag==true)
+	{
+		for (int i=0; i<actual_cluster.body.size(); i++)
+		{
+			geometry_msgs::Vector3 v=convertIndex(actual_cluster.body[i]);
+			north=std::max(north,v.x);
+			south=std::min(south,v.x);
+			east=std::min(east,v.y);
+			west=std::max(west,v.y);
+		}
+		north-=grid_height_/2;
+		south-=grid_height_/2;
+		east+=grid_width_/2;
+		west+=grid_width_/2;
+		actual_cluster.x_center=grid_resolution_*(north+south)/2;
+		actual_cluster.y_center=grid_resolution_*(east+west)/2;
+		actual_cluster.radius=grid_resolution_*sqrt(pow(1+north-south,2)+pow(east-west-1,2))/2;
+	}
+	else
+	{
+		actual_cluster.x_center=1000;
+		actual_cluster.y_center=1000;
+		actual_cluster.radius=0.00001;
+	}
+	std::cout<<"x "<<actual_cluster.x_center<<" y "<<actual_cluster.y_center<<" r "<<actual_cluster.radius<<std::endl;
+}
+//CONVERT
+int MPC::convertIndex(int x, int y)
+{	
+	int n=(-y-1+grid_width_*(x-1));	
+	return n;
+}
+geometry_msgs::Vector3 MPC::convertIndex(const int i)
+{	
+	int x[2];
+	x[1]=-(i%grid_width_)-1;	//y-richtung zelle
+	x[0]=int(i/grid_width_)+1;	//x-richtung zelle
+	geometry_msgs::Vector3 p;
+	p.x=x[0];
+	p.y=x[1];
+	p.z=0;
+	return p;
+}
+float MPC::distanceCells(int i_1, int i_2)	//return distance (meter) between cells
+{
+	geometry_msgs::Vector3 p_1=convertIndex(i_1);
+	geometry_msgs::Vector3 p_2=convertIndex(i_2);
+	float distance=sqrt(pow(p_1.x-p_2.x,2)+pow(p_1.y-p_2.y,2))*grid_resolution_;
+	return distance;
+}
+void MPC::emptyCluster(cluster &actual_cluster)
+{
+	actual_cluster.flag=false;
+	actual_cluster.body.clear();
+	actual_cluster.temp.clear();
+}
+void MPC::inflateClusterMap(cluster c)
+{	
+	int x=c.x_center/grid_resolution_+grid_height_/2;
+	int y=c.y_center/grid_resolution_-grid_width_/2;
+	if((x>0) && x<grid_height_ && y<0 && (y>-grid_width_))
+	{	
+		int R=round(c.radius)/grid_resolution_;
+		for(int i=(x-R); i<=(x+R); i++)
+		{
+			for(int j=(y-R); j<=(y+R); j++)
+			{	
+				//calculates dinstance squared between (i, j) and (x, y).
+				float d=(((x-i)*(x-i))+((y-j)*(y-j)));
+				if((i>0) && (i<grid_height_) && (j<0) && j>-grid_width_ && (d<(R*R)))
+				{
+					//If (i, j) is on the map and the distance to (x,y) is smaller than the defined.
+					int q=convertIndex(i, j);
+					clustered_map_.data[q]=100;
+				}
+			}
+		}
+	}
 }

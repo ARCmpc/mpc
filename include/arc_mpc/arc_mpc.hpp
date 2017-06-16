@@ -172,6 +172,7 @@ public:
 	int convertIndex(int x, int y);
 	geometry_msgs::Vector3 convertIndex(const int i);
 	float distanceCells(int i_1, int i_2);
+  
 	//Rviz visualisation
 	void crateFrameId();
 };
