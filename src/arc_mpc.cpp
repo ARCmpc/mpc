@@ -196,11 +196,17 @@ std::cout<<"Param setted "<<std::endl;
 	for(int i=0;i<n_poses_path_;i++)
 	{
 		local_path_.poses[i].pose.position=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
-		std::cout<<local_path_.poses[i].pose.position<<std::endl;
+
+	}
+	nav_msgs::Path local_past_path_=past_path_;
+	for (int i=0;i<past_path_.poses.size();i++)
+	{
+		local_past_path_.poses[i].pose.position=arc_tools::globalToLocal(past_path_.poses[i].pose.position,state_);
 	}
 	pub_path_.publish(local_path_);
 	pub_fitted_curve_.publish(fitted_path_);
 	pub_planed_trajectory_.publish(planed_path_);
+	pub_past_position_.publish(local_past_path_);
 	//END LOOP
 }
 
