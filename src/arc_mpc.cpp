@@ -191,7 +191,14 @@ for(int i=0;i<N_STEPS;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i
 std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
 	//publishRviz
-	pub_path_.publish(path_);
+	nav_msgs::Path local_path_=path_;
+	local_path_.header.frame_id="map";
+	for(int i=0;i<n_poses_path_;i++)
+	{
+		local_path_.poses[i].pose.position=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
+		std::cout<<local_path_.poses[i].pose.position<<std::endl;
+	}
+	pub_path_.publish(local_path_);
 	pub_fitted_curve_.publish(fitted_path_);
 	pub_planed_trajectory_.publish(planed_path_);
 	//END LOOP
@@ -707,7 +714,7 @@ void MPC::writeTxt()	//write for test and safe paths
 		p.y=y;
 		p.z=0;
 		geometry_msgs::PoseStamped temp_pose;
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		fitted_path_.poses.push_back(temp_pose);
 	}	
 	streampspline.close();
@@ -745,102 +752,102 @@ void MPC::writeTxt()	//write for test and safe paths
 
 		p.x=solver_output_.x01[2];
 		p.y=solver_output_.x01[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x02[2];
 		p.y=solver_output_.x02[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x03[2];
 		p.y=solver_output_.x03[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x04[2];
 		p.y=solver_output_.x04[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x05[2];
 		p.y=solver_output_.x05[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x06[2];
 		p.y=solver_output_.x06[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x07[2];
 		p.y=solver_output_.x07[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x08[2];
 		p.y=solver_output_.x08[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x09[2];
 		p.y=solver_output_.x09[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x10[2];
 		p.y=solver_output_.x10[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x11[2];
 		p.y=solver_output_.x11[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x12[2];
 		p.y=solver_output_.x12[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x13[2];
 		p.y=solver_output_.x13[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x14[2];
 		p.y=solver_output_.x14[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x15[2];
 		p.y=solver_output_.x15[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x16[2];
 		p.y=solver_output_.x16[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x17[2];
 		p.y=solver_output_.x17[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x18[2];
 		p.y=solver_output_.x18[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x19[2];
 		p.y=solver_output_.x19[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x20[2];
 		p.y=solver_output_.x20[3];
-		temp_pose.pose.position=localToGlobal(p,state_);
+		temp_pose.pose.position=p;
 		planed_path_.poses.push_back(temp_pose);
 	}
 }
