@@ -23,7 +23,7 @@ arc_solver_FLOAT CASADI_PREFIX(sign)(arc_solver_FLOAT x) { return x<0 ? -1 : x>0
 
 static const int CASADI_PREFIX(s0)[] = {8, 1, 0, 8, 0, 1, 2, 3, 4, 5, 6, 7};
 #define s0 CASADI_PREFIX(s0)
-static const int CASADI_PREFIX(s1)[] = {41, 1, 0, 41, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40};
+static const int CASADI_PREFIX(s1)[] = {13, 1, 0, 13, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 #define s1 CASADI_PREFIX(s1)
 static const int CASADI_PREFIX(s2)[] = {1, 1, 0, 1, 0};
 #define s2 CASADI_PREFIX(s2)
@@ -100,23 +100,22 @@ int arc_solver_model_20(const arc_solver_FLOAT** arg, arc_solver_FLOAT** res) {
   if (res[1]!=0) res[1][4]=a6;
   if (res[1]!=0) res[1][5]=a8;
   if (res[1]!=0) res[1][6]=a11;
-  a11=arg[1] ? arg[1][11] : 0;
-  a0=(a0-a11);
-  a11=sq(a0);
-  a8=arg[1] ? arg[1][12] : 0;
-  a4=(a4-a8);
-  a8=sq(a4);
-  a11=(a11+a8);
-  a8=arg[1] ? arg[1][31] : 0;
-  a8=sq(a8);
+  a11=arg[1] ? arg[1][12] : 0;
+  a4=(a4-a11);
+  a11=sq(a4);
+  a8=4.;
   a11=(a11/a8);
-  if (res[2]!=0) res[2][0]=a11;
+  a8=arg[1] ? arg[1][11] : 0;
+  a0=(a0-a8);
+  a8=sq(a0);
+  a8=(a8+a11);
+  if (res[2]!=0) res[2][0]=a8;
   a0=(a0+a0);
-  a0=(a0/a8);
   if (res[3]!=0) res[3][0]=a0;
   a4=(a4+a4);
-  a4=(a4/a8);
-  if (res[3]!=0) res[3][1]=a4;
+  a0=2.5000000000000000e-01;
+  a0=(a0*a4);
+  if (res[3]!=0) res[3][1]=a0;
   return 0;
 }
 

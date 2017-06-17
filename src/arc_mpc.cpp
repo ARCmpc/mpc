@@ -26,7 +26,7 @@ std::string PATH_NAME_EDITED;
 //Solver constants
 float SAMPLING_TIME=0.2;
 int N_VAR=8;
-int N_PARAM=41;	//x_ref y_ref v_ref
+int N_PARAM=13;	//x_ref y_ref v_ref
 int N_STEPS=20;
 
 MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
@@ -400,6 +400,9 @@ void MPC::setSolverParam()	//To test
 //State parameter
 	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=costWeight(j)*0;
+	//Obstacles Params
+	solver_param_.all_parameters[i+11]=6;
+	solver_param_.all_parameters[i+12]=0;
 	}
 	//Obstacle Params
 	/*

@@ -26,18 +26,51 @@ model.nvar = 8;
 
 % p(4) - weight of Xtarget
 % p(5) - weight of Ytarget
-% p(6) - weight of Vtarget
+% p(6) - weight of Phitarget
 % p(7) - weight of DeltaAcceleration
 % p(8) - weight of DeltaSteer
 % p(9) - weight of Acceleration
-% p(10) - weight of GreatestLatError
+% p(10) - weight of Steer
 
-%p(11) - street slope
+% p(11) - street slope
 
-model.npar = 11;
+% p(12) - Obstacle1 x
+% p(13) - Obstacle1 y
+% p(14) - Obstacle2 x
+% p(15) - Obstacle2 y
+% p(16) - Obstacle3 x
+% p(17) - Obstacle3 y
+% p(18) - Obstacle4 x
+% p(19) - Obstacle4 y
+% p(20) - Obstacle5 x
+% p(21) - Obstacle5 y
+% p(22) - Obstacle6 x
+% p(23) - Obstacle6 y
+% p(24) - Obstacle7 x
+% p(25) - Obstacle7 y
+% p(26) - Obstacle8 x
+% p(27) - Obstacle8 y
+% p(28) - Obstacle9 x
+% p(29) - Obstacle9 y
+% p(30) - Obstacle10 x
+% p(31) - Obstacle10 y
+
+% p(32) - Obstacle1 radius
+% p(33) - Obstacle2 radius
+% p(34) - Obstacle3 radius
+% p(35) - Obstacle4 radius
+% p(36) - Obstacle5 radius
+% p(37) - Obstacle6 radius
+% p(38) - Obstacle7 radius
+% p(39) - Obstacle8 radius
+% p(40) - Obstacle9 radius
+% p(41) - Obstacle10 radius
+
+
+model.npar = 13;
 
 % NONLINEAR INEQUALITY CONSTRAINTS
-model.nh = 0;
+model.nh = 1;
 
 
 %% objective function
@@ -74,11 +107,10 @@ model.ub = [ +10  +20*pi/180  +inf  +inf   30   +inf    10    25];
 %do we have to define bounds for all z elements? (theta no sense)
 
 % %% "non-simple" inequalities hl <= h(z) <= hu
-%  max_change_delta=integrator_stepsize*0.349; %0.1sec*20grad/sec
-%  model.nh = 1;
-%  model.ineq = @(z,p) abs(z(2)-z(8)); % = cos(theta) <= 1
-%  model.hu = max_change_delta;
-%  model.hl = 0;
+  model.nh = 1;
+  model.ineq = @(z,p) ( (z(3)- p(12))^2 + (z(4)-p(13) )^2 / 4 ); % = cos(theta) <= 1
+  model.hu = +inf;
+  model.hl = 1;
  
 
 
@@ -88,7 +120,7 @@ model.xinitidx = [3, 4, 5, 6, 7, 8];
 
 %% generate solver
 codeoptions = getOptions('arc_solver');
-codeoptions.maxit = 100;
+codeoptions.maxit = 200;
 codeoptions.cleanup = false;
 codeoptions.printlevel=1;
 codeoptions.win = 0;
