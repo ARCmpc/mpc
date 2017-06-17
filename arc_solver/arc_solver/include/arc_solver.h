@@ -96,8 +96,8 @@ typedef struct arc_solver_params
     /* vector of size 6 */
     arc_solver_FLOAT xinit[6];
 
-    /* vector of size 220 */
-    arc_solver_FLOAT all_parameters[220];
+    /* vector of size 820 */
+    arc_solver_FLOAT all_parameters[820];
 
 } arc_solver_params;
 

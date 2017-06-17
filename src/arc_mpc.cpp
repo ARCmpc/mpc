@@ -24,12 +24,10 @@ std::string OBSTACLE_DISTANCE_TOPIC;
 std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
 //Solver constants
-float TIME_HORIZON=10;
 float SAMPLING_TIME=0.2;
 int N_VAR=8;
-int N_PARAM=11;	//x_ref y_ref v_ref
+int N_PARAM=41;	//x_ref y_ref v_ref
 int N_STEPS=20;
-int N_INIT=4;
 
 MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 {
@@ -369,7 +367,12 @@ float MPC::costWeight(int i)
 }
 void MPC::setSolverParam()	//To test
 {
-	int j=0;	
+	int j=0;
+	for(int i=0;i<N_PARAM*N_STEPS;i++)
+	{
+		solver_param_.all_parameters[i]=0;
+	}	
+	
 	for(int i=0;i<N_PARAM*N_STEPS;i+=N_PARAM, j++)
 	{
 //Reference Values
@@ -398,6 +401,12 @@ void MPC::setSolverParam()	//To test
 	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=costWeight(j)*0;
 	}
+	//Obstacle Params
+	/*
+	solver_param_.all_parameters[11]=6;
+	solver_param_.all_parameters[12]=0;
+	solver_param_.all_parameters[31]=1.5;
+	*/
 	//Initial guess
 	float z[N_STEPS*N_VAR];
 	for(int i=0; i<N_VAR;i++)
