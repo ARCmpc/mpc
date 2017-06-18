@@ -25,7 +25,7 @@ std::string SHUTDOWN_TOPIC;
 std::string PATH_NAME_EDITED;
 //Solver constants
 float TIME_HORIZON=10;
-float SAMPLING_TIME=0.2;
+float SAMPLING_TIME=0.35;
 int N_VAR=8;
 int N_PARAM=11;	//x_ref y_ref v_ref
 int N_STEPS=20;
@@ -58,7 +58,7 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	pub_output_1_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_1_topic", QUEUE_LENGTH);
 	pub_output_2_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_2_topic", QUEUE_LENGTH);
 	//Rviz visualisierung
-	pub_path_ = n_->advertise<nav_msgs::Path>("/path", QUEUE_LENGTH);
+	pub_path_ = n_->advertise<nav_msgs::Path>("/path1", QUEUE_LENGTH);
 	pub_past_position_ = n_->advertise<nav_msgs::Path>("/past_positions", QUEUE_LENGTH);
 	pub_fitted_curve_ = n_->advertise<nav_msgs::Path>("/fitted_curve", QUEUE_LENGTH);
 	pub_planed_trajectory_ = n_->advertise<nav_msgs::Path>("/mpc_planning", QUEUE_LENGTH);
@@ -394,9 +394,9 @@ void MPC::setSolverParam()	//To test
 	solver_param_.all_parameters[i+2]=ref_phi_[j];
 //Cost weights
 	//p(4): Weight dx
-	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *4;	//Nermed on 0.5m
+	solver_param_.all_parameters[i+3]=costWeight(j)/0.5 *8;	//Nermed on 0.5m
 	//p(5): Weight dy
-	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *4; //Nermed on 0.5m
+	solver_param_.all_parameters[i+4]=costWeight(j)/0.5 *8; //Nermed on 0.5m
 	//p(6): Weight dphi
 	solver_param_.all_parameters[i+5]=costWeight(j)/ (M_PI*10/180)*8;	//Normed on 10 deg
 	//p(7): Weight change of acceleration
@@ -406,7 +406,7 @@ void MPC::setSolverParam()	//To test
 	//p(9): Weight acceleration
 	solver_param_.all_parameters[i+8]=costWeight(j)/8 *1;	////Normed on 8m/s²
 	//p(10): Weight steer
-	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*10/180) *100;	//Normed on 10 deg
+	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*10/180) *150;	//Normed on 10 deg
 //State parameter
 	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=costWeight(j)*0;
