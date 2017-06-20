@@ -15,6 +15,7 @@ float OBSTACLE_SLOW_DOWN_DISTANCE;
 float OBSTACLE_PUFFER_DISTANCE;
 float SHUT_DOWN_TIME;
 float MAX_CELL_DISTANCE_CLUSTER=0.5;
+float CAR_RADIUS_FOR_OBSTACLE=1.5;
 std::string STELLGROESSEN_TOPIC;
 std::string TRACKING_ERROR_TOPIC;
 std::string NAVIGATION_INFO_TOPIC;
@@ -27,7 +28,7 @@ std::string PATH_NAME_EDITED;
 float TIME_HORIZON=10;
 float SAMPLING_TIME=0.35;
 int N_VAR=8;
-int N_PARAM=11;	//x_ref y_ref v_ref
+int N_PARAM=31;	//x_ref y_ref v_ref
 int N_STEPS=20;
 int N_INIT=4;
 
@@ -54,22 +55,28 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	PATH_NAME_EDITED =PATH_NAME + "_teach.txt";
 	//Publisher
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>(STELLGROESSEN_TOPIC, QUEUE_LENGTH);
-	pub_clustered_grid_=n_->advertise<nav_msgs::OccupancyGrid>("/cluster_grid",QUEUE_LENGTH);
-	pub_output_1_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_1_topic", QUEUE_LENGTH);
-	pub_output_2_ = n_->advertise<std_msgs::Float32MultiArray>("/matlab_output_2_topic", QUEUE_LENGTH);
 	//Rviz visualisierung
+	pub_clustered_grid_=n_->advertise<nav_msgs::OccupancyGrid>("/cluster_grid",QUEUE_LENGTH);
 	pub_path_ = n_->advertise<nav_msgs::Path>("/path1", QUEUE_LENGTH);
 	pub_past_position_ = n_->advertise<nav_msgs::Path>("/past_positions", QUEUE_LENGTH);
 	pub_fitted_curve_ = n_->advertise<nav_msgs::Path>("/fitted_curve", QUEUE_LENGTH);
 	pub_planed_trajectory_ = n_->advertise<nav_msgs::Path>("/mpc_planning", QUEUE_LENGTH);
+	pub_marker_obs_= n_->advertise<visualization_msgs::MarkerArray>( "/obstacle_marker", QUEUE_LENGTH);
 	//Subscriber
 	if(MODE=="simulation") sub_state_matlab_ =n->subscribe("/state_matlab", QUEUE_LENGTH, &MPC::stateMatlabCallback,this);
-	else{
+	else if(MODE=="obstacle")
+	{
+		grid_map_sub_=n_->subscribe(OBSTACLE_MAP_TOPIC, QUEUE_LENGTH, &MPC::gridmapCallback, this);
+		with_obstacle_avoidance_=true;
+	}
+
 		sub_state_ = n_->subscribe(STATE_TOPIC, QUEUE_LENGTH, &MPC::stateCallback,this);
 		distance_to_obstacle_sub_=n_->subscribe(OBSTACLE_DISTANCE_TOPIC, QUEUE_LENGTH ,&MPC::obstacleCallback,this);
 		gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&MPC::guiStopCallback,this);
 		grid_map_sub_=n_->subscribe(OBSTACLE_MAP_TOPIC, QUEUE_LENGTH, &MPC::gridmapCallback, this);
-		}
+	
+
+
 
 	//Initialisations.
 		first_flag_=true;
@@ -77,6 +84,17 @@ MPC::MPC(ros::NodeHandle* n, std::string PATH_NAME, std::string MODE)
 	rest_linear_interpolation_=0;
 	obstacle_distance_=100;
 	gui_stop_=0;
+	jumper_=true;	//Variabel that gives alternation btw state and grid callback functions
+	if(MODE=="obstacle") 
+	{
+		grid_init_=false;
+		state_init_=false;
+	}
+	else 
+	{
+		grid_init_=true;
+		state_init_=true;
+	}
 	//Gridmap
 	grid_width_=120;
 	grid_height_=400;
@@ -139,19 +157,30 @@ obstacle_map_.info.origin = pose;
 for (int i = 0; i < (120*400); i++) {
     obstacle_map_.data.push_back(0);
 }
-obstacle_map_.data[36060]=100;
+/*obstacle_map_.data[36060]=100;
 obstacle_map_.data[36540]=100;
 obstacle_map_.data[36544]=100;
 obstacle_map_.data[36548]=100;
 obstacle_map_.data[36552]=100;
 obstacle_map_.data[36556]=100;
 obstacle_map_.data[36550]=100;
-obstacle_map_.data[36054]=100;
+obstacle_map_.data[36054]=100;*/
 
-float x_1=20+grid_height_/2;
+float x_1=100+grid_height_/2;
 float y_1=10-grid_width_/2;
 int j=convertIndex(x_1,y_1);
-obstacle_map_.data[j]=100;
+obstacle_map_.data[j]=100; 
+
+float x_2=200+grid_height_/2;
+float y_2=20-grid_width_/2;
+int j_2=convertIndex(x_2,y_2);
+obstacle_map_.data[j_2]=100; 
+
+float x_3=100+grid_height_/2;
+float y_3=-59-grid_width_/2;
+int j_3=convertIndex(x_3,y_3);
+obstacle_map_.data[j_3]=100; 
+
 /*obstacle_map_.data[j+3]=100;
 obstacle_map_.data[j-3]=100;
 obstacle_map_.data[j+120]=100;
@@ -166,6 +195,7 @@ clustering();
 for(int i=0; i<all_cells_.size();i++) std::cout<<all_cells_[i]<<std::endl;
 for(int i=0; i<cluster_1_.body.size();i++) std::cout<<cluster_1_.body[i]<<std::endl;
 enframeCluster(cluster_2_);
+std::cout<<"jumper "<<jumper_<<std::endl;
 
 //END TEST
 
@@ -173,43 +203,81 @@ enframeCluster(cluster_2_);
 
 void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 {
+if(jumper_==true)
+{
+std::cout<<"STATE_CALLBACK"<<std::endl;
 	state_ = *incoming_state;
-	v_abs_=6;//state_.pose_diff;
+	v_abs_=state_.pose_diff;
 	//Initialisation
 	ref_x_.clear();
 	ref_y_.clear();
 	ref_v_.clear();
 	ref_phi_.clear();
+	state_init_=true;
 	//LOOP
-std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	generateSpline(20);
-std::cout<<"Spline generated "<<std::endl;
-	findReferencePointsSpline();
-std::cout<<"Reference found "<<std::endl;
-for(int i=0;i<N_STEPS;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" phi-ref: "<<ref_phi_[i]<<std::endl;
-	setSolverParam();
-std::cout<<"Param setted "<<std::endl;
-	getOutputAndReact();
-	//publishRviz
-	nav_msgs::Path local_path_=path_;
-	local_path_.header.frame_id="map";
-	for(int i=0;i<n_poses_path_;i++)
+	if(grid_init_==true && state_init_==true)
 	{
-		local_path_.poses[i].pose.position=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
+	std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
+		generateSpline(25);
+	std::cout<<"Spline generated: "<<std::endl;
+		findReferencePointsSpline();
+	std::cout<<"Reference found "<<std::endl;
+	for(int i=0;i<N_STEPS;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" phi-ref: "<<ref_phi_[i]<<std::endl;
+		setSolverParam();
+	std::cout<<"Param setted "<<std::endl;
+		getOutputAndReact();
 
+	//publishRviz
+		nav_msgs::Path local_path_=path_;
+		local_path_.header.frame_id="map";
+		for(int i=0;i<n_poses_path_;i++)
+		{
+			local_path_.poses[i].pose.position=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
+
+		}
+		nav_msgs::Path local_past_path_=past_path_;
+		for (int i=0;i<past_path_.poses.size();i++)
+		{
+			local_past_path_.poses[i].pose.position=arc_tools::globalToLocal(past_path_.poses[i].pose.position,state_);
+		}
+
+		pub_path_.publish(local_path_);
+		pub_fitted_curve_.publish(fitted_path_);
+		pub_planed_trajectory_.publish(planed_path_);
+		pub_past_position_.publish(local_past_path_);
+		pub_marker_obs_.publish(obstacles_marker_);
 	}
-	nav_msgs::Path local_past_path_=past_path_;
-	for (int i=0;i<past_path_.poses.size();i++)
-	{
-		local_past_path_.poses[i].pose.position=arc_tools::globalToLocal(past_path_.poses[i].pose.position,state_);
-	}
-	pub_path_.publish(local_path_);
-	pub_fitted_curve_.publish(fitted_path_);
-	pub_planed_trajectory_.publish(planed_path_);
-	pub_past_position_.publish(local_past_path_);
-	//END LOOP
+if(with_obstacle_avoidance_==true) jumper_=false;
+}
 }
 
+void MPC::gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& incoming_gridmap)
+{
+if(jumper_==false)
+{	
+std::cout<<"GRID_CALLBACK"<<std::endl;
+	obstacle_map_=*incoming_gridmap;
+	grid_width_=incoming_gridmap->info.width;
+	grid_height_=incoming_gridmap->info.height;
+	grid_resolution_=incoming_gridmap->info.resolution;
+	grid_init_=true;
+	if(grid_init_==true && state_init_==true)
+	{
+		clustering();
+		//FOR RVIZ VISSUALISATION
+		clustered_map_=obstacle_map_;
+		for(int i=0; i<grid_height_*grid_width_; i++) clustered_map_.data[i]=0;
+		inflateClusterMap(cluster_1_);
+		inflateClusterMap(cluster_2_);
+		inflateClusterMap(cluster_3_);
+		inflateClusterMap(cluster_4_);
+		inflateClusterMap(cluster_5_);
+		pub_clustered_grid_.publish(clustered_map_);
+		//End RVIZ VISUALISATION
+	}
+jumper_=true;
+}
+}
 void MPC::obstacleCallback(const std_msgs::Float64::ConstPtr& msg)
 {
 	obstacle_distance_=msg->data;
@@ -261,29 +329,6 @@ std::cout<<"Param setted "<<std::endl;
 	//END LOOP
 
 }
-
-void MPC::gridmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& incoming_gridmap)
-{	
-	float begin_time_ = ros::Time::now().toSec();
-	obstacle_map_=*incoming_gridmap;
-	grid_width_=incoming_gridmap->info.width;
-	grid_height_=incoming_gridmap->info.height;
-	grid_resolution_=incoming_gridmap->info.resolution;
-	clustering();
-	std::cout<<"TIME FOR CLUSTERING= "<<ros::Time::now().toSec()-begin_time_<<std::endl;
-	
-	//FOR RVIZ VISSUALISATION
-	clustered_map_=obstacle_map_;
-	for(int i=0; i<grid_height_*grid_width_; i++) clustered_map_.data[i]=0;
-	inflateClusterMap(cluster_1_);
-	inflateClusterMap(cluster_2_);
-	inflateClusterMap(cluster_3_);
-	inflateClusterMap(cluster_4_);
-	inflateClusterMap(cluster_5_);
-	pub_clustered_grid_.publish(clustered_map_);
-	//End RVIZ VISUALISATIO
-}
-
 void MPC::generateSpline(float lad_interpolation)
 {	
 	std::stringstream t_stream;
@@ -407,9 +452,32 @@ void MPC::setSolverParam()	//To test
 	solver_param_.all_parameters[i+8]=costWeight(j)/8 *1;	////Normed on 8m/s²
 	//p(10): Weight steer
 	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*10/180) *150;	//Normed on 10 deg
+	//Weight Obstacle distances
+	float obstacle_weight=100;
+	solver_param_.all_parameters[i+26]=obstacle_weight;
+	solver_param_.all_parameters[i+27]=obstacle_weight;
+	solver_param_.all_parameters[i+28]=obstacle_weight;
+	solver_param_.all_parameters[i+29]=obstacle_weight;
+	solver_param_.all_parameters[i+30]=obstacle_weight;
 //State parameter
 	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=costWeight(j)*0;
+//Obstacle Parameters
+	solver_param_.all_parameters[i+11]=cluster_1_.x_center;
+	solver_param_.all_parameters[i+12]=cluster_1_.y_center;
+	solver_param_.all_parameters[i+13]=cluster_1_.radius;
+	solver_param_.all_parameters[i+14]=cluster_2_.x_center;
+	solver_param_.all_parameters[i+15]=cluster_2_.y_center;
+	solver_param_.all_parameters[i+16]=cluster_2_.radius;
+	solver_param_.all_parameters[i+17]=cluster_3_.x_center;
+	solver_param_.all_parameters[i+18]=cluster_3_.y_center;
+	solver_param_.all_parameters[i+19]=cluster_3_.radius;
+	solver_param_.all_parameters[i+20]=cluster_4_.x_center;
+	solver_param_.all_parameters[i+21]=cluster_4_.y_center;
+	solver_param_.all_parameters[i+22]=cluster_4_.radius;
+	solver_param_.all_parameters[i+23]=cluster_5_.x_center;
+	solver_param_.all_parameters[i+24]=cluster_5_.y_center;
+	solver_param_.all_parameters[i+25]=cluster_5_.radius;
 	}
 	//Initial guess
 	float z[N_STEPS*N_VAR];
@@ -437,7 +505,7 @@ void MPC::setSolverParam()	//To test
 		z[i+19*N_VAR]=solver_output_.x20[i];
 	}
 
-	if(first_flag_) 
+	if(first_flag_ || with_obstacle_avoidance_==true) 
 	{
 		for(int i=0;i<N_VAR*N_STEPS;i++) solver_param_.x0[i]=0;
 		first_flag_=false;
@@ -710,7 +778,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	std::string pointsspline= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsspline.txt";
 	std::ofstream streampspline(pointsspline.c_str(), std::ios::out);
 	fitted_path_.poses.clear();
-	for (float i=0; i<20; i+=0.8)
+	for (float i=0; i<25; i+=0.8)
 	{
 		float x=spline1dcalc(c_x_, i);
 		float y=spline1dcalc(c_y_, i);
@@ -930,6 +998,7 @@ void MPC::calculateParamFun(float lad_interpolation)
 
 void MPC::getOutputAndReact()
 {
+	std::cout<<"asdasdasd "<<std::endl;
 	int flag=arc_solver_solve(&solver_param_, &solver_output_, &solver_info_,stdout, pt2Function);
 	//write txt file
 	writeTxt();
@@ -1175,6 +1244,21 @@ void MPC::clustering()
 	std::cout<<"Cluster_4 enframed"<<std::endl;
 	enframeCluster(cluster_5_);
 	std::cout<<"Cluster_5 enframed"<<std::endl;
+	//Create marker
+std::cout<<"ciao1"<<std::endl;
+	obstacle_marker_1_=createMarker(cluster_1_.x_center,cluster_1_.y_center,cluster_1_.radius,1);
+std::cout<<"ciao1"<<std::endl;
+	obstacle_marker_2_=createMarker(cluster_2_.x_center,cluster_2_.y_center,cluster_2_.radius,2);
+	obstacle_marker_3_=createMarker(cluster_3_.x_center,cluster_3_.y_center,cluster_3_.radius,3);
+	obstacle_marker_4_=createMarker(cluster_4_.x_center,cluster_4_.y_center,cluster_4_.radius,4);
+	obstacle_marker_5_=createMarker(cluster_5_.x_center,cluster_5_.y_center,cluster_5_.radius,5);
+	obstacles_marker_.markers.clear();
+	obstacles_marker_.markers.push_back(obstacle_marker_1_);
+	obstacles_marker_.markers.push_back(obstacle_marker_2_);
+	obstacles_marker_.markers.push_back(obstacle_marker_3_);
+	obstacles_marker_.markers.push_back(obstacle_marker_4_);
+	obstacles_marker_.markers.push_back(obstacle_marker_5_);
+std::cout<<obstacles_marker_<<std::endl;
 }
 
 void MPC::fillCluster(cluster &actual_cluster)
@@ -1227,13 +1311,15 @@ void MPC::enframeCluster(cluster &actual_cluster)
 		west+=grid_width_/2;
 		actual_cluster.x_center=grid_resolution_*(north+south)/2;
 		actual_cluster.y_center=grid_resolution_*(east+west)/2;
-		actual_cluster.radius=grid_resolution_*sqrt(pow(1+north-south,2)+pow(east-west-1,2))/2;
+		float temp_radius=grid_resolution_*sqrt(pow(1+north-south,2)+pow(east-west-1,2))/2+2*CAR_RADIUS_FOR_OBSTACLE;
+		actual_cluster.radius=std::min(float(2.5),temp_radius);
+		actual_cluster.radius=std::max(float(0.5),actual_cluster.radius);
 	}
 	else
 	{
-		actual_cluster.x_center=1000;
-		actual_cluster.y_center=1000;
-		actual_cluster.radius=0.00001;
+		actual_cluster.x_center=-100;
+		actual_cluster.y_center=0;
+		actual_cluster.radius=0.1;
 	}
 	std::cout<<"x "<<actual_cluster.x_center<<" y "<<actual_cluster.y_center<<" r "<<actual_cluster.radius<<std::endl;
 }
@@ -1289,4 +1375,29 @@ void MPC::inflateClusterMap(cluster c)
 			}
 		}
 	}
+}
+visualization_msgs::Marker MPC::createMarker(float x, float y, float radius, int id)
+{
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "map";
+	marker.header.stamp = ros::Time();
+	marker.ns = "my_namespace";
+	marker.id = id;
+	marker.type = visualization_msgs::Marker::CYLINDER;
+	marker.action = visualization_msgs::Marker::ADD;
+	marker.pose.position.x = x;
+	marker.pose.position.y = y;
+	marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+	marker.scale.x = 2*radius;
+	marker.scale.y = 2*radius;
+	marker.scale.z = 1;
+	marker.color.a = 0.7; // Don't forget to set the alpha!
+	marker.color.r = 1.0;
+	marker.color.g = 0.0;
+	marker.color.b = 0.0;
+	return marker;
 }

@@ -4,7 +4,7 @@ project(arc_mpc)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin_simple 0.1.0 REQUIRED COMPONENTS roscpp arc_tools geometry_msgs nav_msgs ackermann_msgs catkin_simple REQUIRED)
+find_package(catkin_simple 0.1.0 REQUIRED COMPONENTS roscpp arc_tools geometry_msgs visualization_msgs nav_msgs ackermann_msgs catkin_simple REQUIRED)
 
 catkin_simple(ALL_DEPS_REQUIRED)
 

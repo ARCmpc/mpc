@@ -27,6 +27,8 @@
 #include <../alglib/src/stdafx.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 class MPC{
 	
 private:
@@ -43,10 +45,18 @@ private:
 	ros::Publisher pub_past_position_ ;
 	ros::Publisher pub_fitted_curve_ ;
 	ros::Publisher pub_planed_trajectory_ ;
+	ros::Publisher pub_marker_obs_;
 	nav_msgs::Path past_path_;
 	nav_msgs::Path fitted_path_;
 	nav_msgs::Path planed_path_;
-	// Subscribers.
+	visualization_msgs::Marker obstacle_marker_1_;
+	visualization_msgs::Marker obstacle_marker_2_;
+	visualization_msgs::Marker obstacle_marker_3_;
+	visualization_msgs::Marker obstacle_marker_4_;
+	visualization_msgs::Marker obstacle_marker_5_;
+	visualization_msgs::MarkerArray obstacles_marker_;
+
+		// Subscribers.
 	ros::Subscriber sub_state_;
 	ros::Subscriber distance_to_obstacle_sub_;
 	ros::Subscriber gui_stop_sub_;
@@ -78,6 +88,10 @@ private:
 	std::vector<float> v_ref_;
 	//Shut down from graphical user interface
 	bool gui_stop_;
+	bool with_obstacle_avoidance_;
+	bool jumper_;	//Variabel that gives alternation btw state and grid callback functions
+	bool grid_init_;
+	bool state_init_;
 	//Time
 	arc_tools::Clock BigBen_;
 	//
@@ -169,6 +183,7 @@ public:
 	void enframeCluster(cluster &actual_cluster);
 	void emptyCluster(cluster &actual_cluster);
 	void inflateClusterMap(cluster c);
+	visualization_msgs::Marker createMarker(float x, float y, float radius, int id);
 	int convertIndex(int x, int y);
 	geometry_msgs::Vector3 convertIndex(const int i);
 	float distanceCells(int i_1, int i_2);

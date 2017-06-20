@@ -121,11 +121,11 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
     {
     mexErrMsgTxt("PARAMS.all_parameters must be a double.");
     }
-    if( mxGetM(par) != 220 || mxGetN(par) != 1 ) {
-    mexErrMsgTxt("PARAMS.all_parameters must be of size [220 x 1]");
+    if( mxGetM(par) != 620 || mxGetN(par) != 1 ) {
+    mexErrMsgTxt("PARAMS.all_parameters must be of size [620 x 1]");
     }
 #endif	 
-    copyMArrayToC(mxGetPr(par), params.all_parameters, 220);
+    copyMArrayToC(mxGetPr(par), params.all_parameters, 620);
 
 	#if arc_solver_SET_PRINTLEVEL > 0
 		/* Prepare file for printfs */
