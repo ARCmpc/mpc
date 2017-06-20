@@ -165,7 +165,7 @@ obstacle_map_.data[36552]=100;
 obstacle_map_.data[36556]=100;
 obstacle_map_.data[36550]=100;
 obstacle_map_.data[36054]=100;*/
-
+/*
 float x_1=100+grid_height_/2;
 float y_1=10-grid_width_/2;
 int j=convertIndex(x_1,y_1);
@@ -179,7 +179,7 @@ obstacle_map_.data[j_2]=100;
 float x_3=100+grid_height_/2;
 float y_3=-59-grid_width_/2;
 int j_3=convertIndex(x_3,y_3);
-obstacle_map_.data[j_3]=100; 
+obstacle_map_.data[j_3]=100; */
 
 /*obstacle_map_.data[j+3]=100;
 obstacle_map_.data[j-3]=100;
@@ -412,7 +412,7 @@ void MPC::findReferencePointsSpline()
 		j_end=indexOfDistanceFront(j_start,30).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
 		j_next=localPointToPathIndex(ref_point , j_start , j_end);
 		//v_ref=v_ref_[j_next];
-		v_ref=6;//vRef(ref_point,j_start,j_end);
+		v_ref=2;//vRef(ref_point,j_start,j_end);
 		ref_v_.push_back(v_ref);
 		//Find reference orientation
 		ref_phi_.push_back(phiSpline(t_curr));
@@ -453,7 +453,7 @@ void MPC::setSolverParam()	//To test
 	//p(10): Weight steer
 	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*10/180) *150;	//Normed on 10 deg
 	//Weight Obstacle distances
-	float obstacle_weight=100;
+	float obstacle_weight=400;
 	solver_param_.all_parameters[i+26]=obstacle_weight;
 	solver_param_.all_parameters[i+27]=obstacle_weight;
 	solver_param_.all_parameters[i+28]=obstacle_weight;
@@ -505,7 +505,7 @@ void MPC::setSolverParam()	//To test
 		z[i+19*N_VAR]=solver_output_.x20[i];
 	}
 
-	if(first_flag_ || with_obstacle_avoidance_==true) 
+	if(first_flag_ )//|| with_obstacle_avoidance_==true) 
 	{
 		for(int i=0;i<N_VAR*N_STEPS;i++) solver_param_.x0[i]=0;
 		first_flag_=false;
@@ -751,7 +751,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	//Past
 	past_path_.poses.push_back(state_.pose);
 	//Future
-	std::string pointsinterpol= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
+	std::string pointsinterpol= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
 	std::ofstream streampinterp(pointsinterpol.c_str(), std::ios::out);
 	int i_start = state_.current_arrayposition;
 	int i_end = indexOfDistanceFront(i_start, INTERPOLATION_DISTANCE_FRONT).x;
@@ -766,7 +766,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	streampinterp.close();
 
 	//Reference
-	std::string pointsreference= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsreference.txt";
+	std::string pointsreference= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsreference.txt";
 	std::ofstream streamprefe(pointsreference.c_str(), std::ios::out);
 	for (int i=0; i<N_STEPS; i++)
 	{
@@ -775,7 +775,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	streamprefe.close();
 
 	//Interpolated
-	std::string pointsspline= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsspline.txt";
+	std::string pointsspline= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsspline.txt";
 	std::ofstream streampspline(pointsspline.c_str(), std::ios::out);
 	fitted_path_.poses.clear();
 	for (float i=0; i<25; i+=0.8)
@@ -794,7 +794,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	streampspline.close();
   
 	//Planed
-	std::string pointsplaned= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
+	std::string pointsplaned= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
 	std::ofstream streamplaned(pointsplaned.c_str(), std::ios::out);
 
 	streamplaned <<solver_output_.x01[2]<<" "<<solver_output_.x01[3]<<"\r\n";	
@@ -1007,7 +1007,7 @@ void MPC::getOutputAndReact()
 	{
 	//Set inputs
 	u_.steering_angle=solver_output_.x01[1];
-	u_.speed=6;//solver_output_.x01[4];
+	u_.speed=2;//solver_output_.x01[4];
 	u_.acceleration=solver_output_.x01[0];
 	pub_stellgroessen_.publish(u_);
 	}
@@ -1274,7 +1274,7 @@ void MPC::fillCluster(cluster &actual_cluster)
 		{
 			for (int i=0;i<all_cells_.size();i++)
 			{
-				if (distanceCells(protagonist,all_cells_[i])<1) 
+				if (distanceCells(protagonist,all_cells_[i])<2.5) 
 					{
 						actual_cluster.temp.push_back(all_cells_[i]); 
 						all_cells_.erase(all_cells_.begin()+i);
