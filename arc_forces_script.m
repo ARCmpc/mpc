@@ -26,29 +26,56 @@ model.nvar = 8;
 
 % p(4) - weight of Xtarget
 % p(5) - weight of Ytarget
-% p(6) - weight of Vtarget
+% p(6) - weight of Phitarget
 % p(7) - weight of DeltaAcceleration
 % p(8) - weight of DeltaSteer
 % p(9) - weight of Acceleration
-% p(10) - weight of GreatestLatError
+% p(10) - weight of Steer
 
-%p(11) - street slope
+% p(11) - street slope
 
-model.npar = 11;
+% p(12) - Obstacle1 x
+% p(13) - Obstacle1 y
+% p(14) - Radius1
+% p(15) - Obstacle2 x
+% p(16) - Obstacle2 y
+% p(17) - Radius2
+% p(18) - Obstacle3 x
+% p(19) - Obstacle3 y
+% p(20) - Radius3
+% p(21) - Obstacle4 x
+% p(22) - Obstacle4 y
+% p(23) - Radius4
+% p(24) - Obstacle5 x
+% p(25) - Obstacle5 y
+% p(26) - Radius5
+
+%p(27) -Weight Obstacle1
+%p(28) -Weight Obstacle2
+%p(29) -Weight Obstacle3
+%p(30) -Weight Obstacle4
+%p(31) -Weight Obstacle5
+
+model.npar = 31;
 
 % NONLINEAR INEQUALITY CONSTRAINTS
-model.nh = 0;
+model.nh = 5;
 
-
+L=2.35585;% Physical constants of the model
+S=0.4;
 %% objective function
-model.objective = @(z,p) (   p(4)*(z(3)-p(1))^2 + p(5)*(z(4)-p(2))^2 + p(6)*(z(6)-p(3))^2 +p(7)*(z(7)-z(1))^2 ...
-                            + p(8)*(z(8)-z(2))^2 +p(9)*(z(1))^2 + p(10)*(z(2))^2);
-%how penalize difference between steps of steer for example?
-%introducing another param that is the last output?
+
+model.objective = @(z,p) (   p(4)*(z(3)-p(1))^2 + p(5)*(z(4)-p(2))^2 + p(6)*(z(6)-p(3))^2 ...
+                            +p(7)*(z(7)-z(1))^2+ p(8)*(z(8)-z(2))^2 +p(9)*(z(1))^2 + p(10)*(z(2))^2 ...
+                            +p(27)* exp(-2*((z(3)-p(12)+cos(z(6))*L/2)^2 + (z(4)-p(13)+sin(z(6))*L/2)^2 -(p(14)+S)^2 )) ...
+                            +p(28)* exp(-2*((z(3)-p(15)+cos(z(6))*L/2)^2 + (z(4)-p(16)+sin(z(6))*L/2)^2 -(p(17)+S)^2 )) ...
+                            +p(29)* exp(-2*((z(3)-p(18)+cos(z(6))*L/2)^2 + (z(4)-p(19)+sin(z(6))*L/2)^2 -(p(20)+S)^2 )) ...
+                            +p(30)* exp(-2*((z(3)-p(21)+cos(z(6))*L/2)^2 + (z(4)-p(22)+sin(z(6))*L/2)^2 -(p(23)+S)^2 )) ...
+                            +p(31)* exp(-2*((z(3)-p(24)+cos(z(6))*L/2)^2 + (z(4)-p(25)+sin(z(6))*L/2)^2 -(p(26)+S)^2 )) );
 
 %% dynamics
 % We use an explicit RK4 integrator here to discretize continuous dynamics:
-L=2.35585;% Physical constants of the model
+
 integrator_stepsize = 0.2;
 %what is this stepsize?
 continuous_dynamics = @(x,u) [x(3)*cos(x(4));  % v*cos(phi) = Xdot
@@ -74,21 +101,24 @@ model.ub = [ +10  +20*pi/180  +inf  +inf   30   +inf    10    25];
 %do we have to define bounds for all z elements? (theta no sense)
 
 % %% "non-simple" inequalities hl <= h(z) <= hu
-%  max_change_delta=integrator_stepsize*0.349; %0.1sec*20grad/sec
-%  model.nh = 1;
-%  model.ineq = @(z,p) abs(z(2)-z(8)); % = cos(theta) <= 1
-%  model.hu = max_change_delta;
-%  model.hl = 0;
+   model.nh = 0;
+%   model.ineq = @(z,p) [    ( (z(3)- p(12)+L/2)^2 + (z(4)-p(13) )^2) / (p(14)^2);
+%                            ( (z(3)- p(15)+L/2)^2 + (z(4)-p(16) )^2) / (p(17)^2);
+%                            ( (z(3)- p(18)+L/2)^2 + (z(4)-p(19) )^2) / (p(20)^2);
+%                            ( (z(3)- p(21)+L/2)^2 + (z(4)-p(22) )^2) / (p(23)^2);
+%                            ( (z(3)- p(24)+L/2)^2 + (z(4)-p(25) )^2) / (p(26)^2);  ]; % = cos(theta) <= 1
+%   model.hu = +inf*ones(5,1);
+%   model.hl = 1*ones(5,1);
  
 
 
 %% initial condition, write elements of z affected by initial condition here  z[3] is X
-%                 X  Y  v phi 
+%                 X  Y  v phi a_old d_old
 model.xinitidx = [3, 4, 5, 6, 7, 8];
 
 %% generate solver
 codeoptions = getOptions('arc_solver');
-codeoptions.maxit = 100;
+codeoptions.maxit = 700;
 codeoptions.cleanup = false;
 codeoptions.printlevel=1;
 codeoptions.win = 0;
@@ -97,54 +127,3 @@ codeoptions.gnu = 1;
 codeoptions.platform = 'x86_64';
 codeoption.optlevel=3;
 FORCES_NLP(model, codeoptions);
-
-%% solve - anything beyond this does not need codegen!
-x = linspace(0,10,30);
-y = 0.2*x;
-p = polyfit(x,y,7);
-x1=linspace(0,20,10);    %9 is number of ref points
-y1 = polyval(p,x1);
-% points to track
-Xt =  [x1;y1;5 5 5 5 5 5 5 5 5 5];
-%Initial reference 0 0 v_now has to be part of ref vector?
-%Xt[i,1] ist referenz nach einem zeitschritt oder bei t=0?
-% 1. Fill problem data
-problem.x0 = zeros(model.N*model.nvar,1); % initialize to zeros
-%what is this for?
-problem.all_parameters = [];
-for i = 1:model.N
-    problem.all_parameters = [problem.all_parameters; Xt(:,i)];
-end
-
-% set initial condition
-problem.xinit = [0; 0; 0; 0; 0;];
-
-%2. call solver
-output = arc_solver(problem);
-
-
-%% plot
-Xopt = [];
-Yopt = [];
-vopt = [];
-Fopt = [];
-sopt = [];
-thetaopt = [];
-for i = 1:model.N
-    Fopt = [Fopt, output.(sprintf('x%d',i))(1)];
-    sopt = [sopt, output.(sprintf('x%d',i))(2)];
-    Xopt = [Xopt, output.(sprintf('x%d',i))(3)];
-    Yopt = [Yopt, output.(sprintf('x%d',i))(4)];
-    vopt = [vopt, output.(sprintf('x%d',i))(5)];
-   thetaopt = [thetaopt, output.(sprintf('x%d',i))(6)];
-end
-
-figure(1); clf;
-plot(Xopt,Yopt);%,x1,y1);
-
-figure(2); clf;
-subplot(2,1,1); plot(Fopt); title('acceleration')
-subplot(2,1,2); plot(sopt); title('steering');
-
-figure(3);clf;
-plot(vopt);
