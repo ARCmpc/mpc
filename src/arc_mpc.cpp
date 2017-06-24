@@ -182,7 +182,7 @@ void MPC::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	ref_phi_.clear();
 	//LOOP
 std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
-	generateSpline(20);
+	generateSpline(28);
 std::cout<<"Spline generated "<<std::endl;
 	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
@@ -327,7 +327,7 @@ std::cout<<t_stream.str()<<std::endl<<std::endl<<x_stream.str()<<std::endl<<std:
 
 alglib::ae_int_t info;
 alglib::spline1dfitreport rep;
-    double rho=5;
+    double rho=4;
     int M=150;
 	alglib::spline1dfitpenalized(t_, x_, M, rho, info, c_x_, rep);
 	alglib::spline1dfitpenalized(t_, y_, M, rho, info, c_y_, rep);
@@ -367,7 +367,7 @@ void MPC::findReferencePointsSpline()
 		j_end=indexOfDistanceFront(j_start,30).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
 		j_next=localPointToPathIndex(ref_point , j_start , j_end);
 		//v_ref=v_ref_[j_next];
-		v_ref=6;//vRef(ref_point,j_start,j_end);
+		v_ref=4;//vRef(ref_point,j_start,j_end);
 		ref_v_.push_back(v_ref);
 		//Find reference orientation
 		ref_phi_.push_back(phiSpline(t_curr));
@@ -406,7 +406,7 @@ void MPC::setSolverParam()	//To test
 	//p(9): Weight acceleration
 	solver_param_.all_parameters[i+8]=costWeight(j)/8 *1;	////Normed on 8m/s²
 	//p(10): Weight steer
-	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*10/180) *150;	//Normed on 10 deg
+	solver_param_.all_parameters[i+9]=costWeight(j)/(M_PI*10/180) *50;	//Normed on 10 deg
 //State parameter
 	//p(11): Street slope, not implemented 
 	solver_param_.all_parameters[i+10]=costWeight(j)*0;
@@ -683,7 +683,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	//Past
 	past_path_.poses.push_back(state_.pose);
 	//Future
-	std::string pointsinterpol= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
+	std::string pointsinterpol= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsinterpol.txt";
 	std::ofstream streampinterp(pointsinterpol.c_str(), std::ios::out);
 	int i_start = state_.current_arrayposition;
 	int i_end = indexOfDistanceFront(i_start, INTERPOLATION_DISTANCE_FRONT).x;
@@ -698,7 +698,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	streampinterp.close();
 
 	//Reference
-	std::string pointsreference= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsreference.txt";
+	std::string pointsreference= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsreference.txt";
 	std::ofstream streamprefe(pointsreference.c_str(), std::ios::out);
 	for (int i=0; i<N_STEPS; i++)
 	{
@@ -707,10 +707,10 @@ void MPC::writeTxt()	//write for test and safe paths
 	streamprefe.close();
 
 	//Interpolated
-	std::string pointsspline= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsspline.txt";
+	std::string pointsspline= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsspline.txt";
 	std::ofstream streampspline(pointsspline.c_str(), std::ios::out);
 	fitted_path_.poses.clear();
-	for (float i=0; i<20; i+=0.8)
+	for (float i=0; i<28; i+=0.8)
 	{
 		float x=spline1dcalc(c_x_, i);
 		float y=spline1dcalc(c_y_, i);
@@ -726,7 +726,7 @@ void MPC::writeTxt()	//write for test and safe paths
 	streampspline.close();
   
 	//Planed
-	std::string pointsplaned= "/home/moritz/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
+	std::string pointsplaned= "/home/arcsystem/catkin_ws/src/arc_mpc/text/pointsplaned.txt";
 	std::ofstream streamplaned(pointsplaned.c_str(), std::ios::out);
 
 	streamplaned <<solver_output_.x01[2]<<" "<<solver_output_.x01[3]<<"\r\n";	
@@ -937,8 +937,8 @@ void MPC::getOutputAndReact()
 	if(flag==1)
 	{
 	//Set inputs
-	u_.steering_angle=solver_output_.x01[1];
-	u_.speed=6;//solver_output_.x01[4];
+	u_.steering_angle=solver_output_.x01[1]*1.4;
+	u_.speed=4;//solver_output_.x01[4];
 	u_.acceleration=solver_output_.x01[0];
 	pub_stellgroessen_.publish(u_);
 	}
