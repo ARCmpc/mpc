@@ -192,8 +192,6 @@ obstacle_map_.data[j-120]=100;*/
 }*/
 
 clustering();
-for(int i=0; i<all_cells_.size();i++) std::cout<<all_cells_[i]<<std::endl;
-for(int i=0; i<cluster_1_.body.size();i++) std::cout<<cluster_1_.body[i]<<std::endl;
 enframeCluster(cluster_2_);
 std::cout<<"jumper "<<jumper_<<std::endl;
 
@@ -222,7 +220,6 @@ std::cout<<"STATE_CALLBACK"<<std::endl;
 	std::cout<<"Spline generated: "<<std::endl;
 		findReferencePointsSpline();
 	std::cout<<"Reference found "<<std::endl;
-	for(int i=0;i<N_STEPS;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" phi-ref: "<<ref_phi_[i]<<std::endl;
 		setSolverParam();
 	std::cout<<"Param setted "<<std::endl;
 		getOutputAndReact();
@@ -322,7 +319,6 @@ std::cout<<"Arrayposition "<<state_.current_arrayposition<<std::endl;
 std::cout<<"Spline generated "<<std::endl;
 	findReferencePointsSpline();
 std::cout<<"Reference found "<<std::endl;
-for(int i=0;i<9;i++) std::cout<<"x-ref: "<<ref_x_[i]<<" y-ref: "<<ref_y_[i]<<" v-ref: "<<ref_v_[i]<<std::endl;
 	setSolverParam();
 std::cout<<"Param setted "<<std::endl;
 	getOutputAndReact();
@@ -359,7 +355,6 @@ void MPC::generateSpline(float lad_interpolation)
 	t_stream<<"]";
 	x_stream<<"]";
 	y_stream<<"]";
-std::cout<<t_stream.str()<<std::endl<<std::endl<<x_stream.str()<<std::endl<<std::endl<<y_stream.str()<<std::endl;
 	std::string t_string=t_stream.str();
 	std::string x_string=x_stream.str();
 	std::string y_string=y_stream.str();
@@ -381,7 +376,6 @@ for(int t_0=0; t_0<int(lad_interpolation); t_0++)
 {
 	float x_0= spline1dcalc(c_x_, t_0);
 	float y_0= spline1dcalc(c_y_, t_0);
-	std::cout<<"t_0 "<<t_0<<" x= "<<x_0<<" y= "<<y_0<<std::endl;
 }
 }
 void MPC::findReferencePointsSpline()
@@ -505,7 +499,7 @@ void MPC::setSolverParam()	//To test
 		z[i+19*N_VAR]=solver_output_.x20[i];
 	}
 
-	if(first_flag_ )//|| with_obstacle_avoidance_==true) 
+	if(first_flag_ || with_obstacle_avoidance_==true) 
 	{
 		for(int i=0;i<N_VAR*N_STEPS;i++) solver_param_.x0[i]=0;
 		first_flag_=false;
@@ -1194,7 +1188,6 @@ double y_dd;
 alglib::spline1ddiff(c_x_,t,x,x_d,x_dd);
 alglib::spline1ddiff(c_y_,t,y,y_d,y_dd);
 phi=atan2(y_d,x_d);
-std::cout<<"Phi at = "<<t<<" = "<<phi*180/M_PI<<std::endl;
 return phi;
 }
 
@@ -1214,40 +1207,38 @@ void MPC::clustering()
 	}
 	//Filling Clusters
 	fillCluster(cluster_1_);
-	std::cout<<"Cluster_1 filled"<<std::endl;
+//	std::cout<<"Cluster_1 filled"<<std::endl;
 	fillCluster(cluster_2_);
-	std::cout<<"Cluster_2 filled"<<std::endl;
+//	std::cout<<"Cluster_2 filled"<<std::endl;
 	fillCluster(cluster_3_);
-	std::cout<<"Cluster_3 filled"<<std::endl;
+//	std::cout<<"Cluster_3 filled"<<std::endl;
 	fillCluster(cluster_4_);
-	std::cout<<"Cluster_4 filled"<<std::endl;
+//	std::cout<<"Cluster_4 filled"<<std::endl;
 	fillCluster(cluster_5_);
-	std::cout<<"Cluster_5 filled"<<std::endl;
+//	std::cout<<"Cluster_5 filled"<<std::endl;
 	//all_cells is really empty?
 	for(int i=0; i<all_cells_.size(); i++)
 	{
 		std::cout<<"Warning. This cell not clustered: "<<all_cells_[i]<<std::endl;
 	}
-	std::cout<<"Flag of 1= "<<cluster_1_.flag<<std::endl;
-	std::cout<<"Flag of 2= "<<cluster_2_.flag<<std::endl;
-	std::cout<<"Flag of 3= "<<cluster_3_.flag<<std::endl;
-	std::cout<<"Flag of 4= "<<cluster_4_.flag<<std::endl;
-	std::cout<<"Flag of 5= "<<cluster_5_.flag<<std::endl;
+//	std::cout<<"Flag of 1= "<<cluster_1_.flag<<std::endl;
+//	std::cout<<"Flag of 2= "<<cluster_2_.flag<<std::endl;
+//	std::cout<<"Flag of 3= "<<cluster_3_.flag<<std::endl;
+//	std::cout<<"Flag of 4= "<<cluster_4_.flag<<std::endl;
+//	std::cout<<"Flag of 5= "<<cluster_5_.flag<<std::endl;
 	//Circle around cluser
 	enframeCluster(cluster_1_);
-	std::cout<<"Cluster_1 enframed"<<std::endl;
+//	std::cout<<"Cluster_1 enframed"<<std::endl;
 	enframeCluster(cluster_2_);
-	std::cout<<"Cluster_2 enframed"<<std::endl;
+//	std::cout<<"Cluster_2 enframed"<<std::endl;
 	enframeCluster(cluster_3_);
-	std::cout<<"Cluster_3 enframed"<<std::endl;
+//	std::cout<<"Cluster_3 enframed"<<std::endl;
 	enframeCluster(cluster_4_);
-	std::cout<<"Cluster_4 enframed"<<std::endl;
+//	std::cout<<"Cluster_4 enframed"<<std::endl;
 	enframeCluster(cluster_5_);
-	std::cout<<"Cluster_5 enframed"<<std::endl;
+//	std::cout<<"Cluster_5 enframed"<<std::endl;
 	//Create marker
-std::cout<<"ciao1"<<std::endl;
 	obstacle_marker_1_=createMarker(cluster_1_.x_center,cluster_1_.y_center,cluster_1_.radius,1);
-std::cout<<"ciao1"<<std::endl;
 	obstacle_marker_2_=createMarker(cluster_2_.x_center,cluster_2_.y_center,cluster_2_.radius,2);
 	obstacle_marker_3_=createMarker(cluster_3_.x_center,cluster_3_.y_center,cluster_3_.radius,3);
 	obstacle_marker_4_=createMarker(cluster_4_.x_center,cluster_4_.y_center,cluster_4_.radius,4);
@@ -1258,7 +1249,6 @@ std::cout<<"ciao1"<<std::endl;
 	obstacles_marker_.markers.push_back(obstacle_marker_3_);
 	obstacles_marker_.markers.push_back(obstacle_marker_4_);
 	obstacles_marker_.markers.push_back(obstacle_marker_5_);
-std::cout<<obstacles_marker_<<std::endl;
 }
 
 void MPC::fillCluster(cluster &actual_cluster)
@@ -1282,7 +1272,6 @@ void MPC::fillCluster(cluster &actual_cluster)
 			}
 			//Nach der Überprüfung mit allen anderen zellen geht protagonist in den body, wird von temp gelöscht und der nächte temp element ist dran
 			actual_cluster.body.push_back(protagonist);
-			std::cout<<"Cell "<<protagonist<<" is now part of cluster body"<<std::endl;
 			actual_cluster.temp.erase(actual_cluster.temp.begin());
 			protagonist=actual_cluster.temp[0];
 		}

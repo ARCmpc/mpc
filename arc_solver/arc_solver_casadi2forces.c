@@ -52,8 +52,8 @@ void arc_solver_casadi2forces(arc_solver_FLOAT *x,        /* primal vars        
     /* temporary storage for casadi sparse output */
     arc_solver_FLOAT this_f;
     arc_solver_FLOAT nabla_f_sparse[7];
-    
-    
+    arc_solver_FLOAT h_sparse[5];
+    arc_solver_FLOAT nabla_h_sparse[10];
     arc_solver_FLOAT c_sparse[6];
     arc_solver_FLOAT nabla_c_sparse[18];
             
@@ -76,25 +76,36 @@ void arc_solver_casadi2forces(arc_solver_FLOAT *x,        /* primal vars        
 	 if (stage >= 0 && stage < 19)
 	 {
 		 /* set inputs */
-		 out[2] = c_sparse;
-		 out[3] = nabla_c_sparse;
+		 out[2] = h_sparse;
+		 out[3] = nabla_h_sparse;
+		 out[4] = c_sparse;
+		 out[5] = nabla_c_sparse;
+		 
+
 		 /* call CasADi */
 		 arc_solver_model_1(in, out);
 
 		 /* copy to dense */
 		 if( nabla_f ){ arc_solver_model_1_sparsity(3, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, nabla_f_sparse, nabla_f); }
-		 if( c ){ arc_solver_model_1_sparsity(4, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, c_sparse, c); }
-		 if( nabla_c ){ arc_solver_model_1_sparsity(5, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, nabla_c_sparse, nabla_c); }
+		 if( c ){ arc_solver_model_1_sparsity(6, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, c_sparse, c); }
+		 if( nabla_c ){ arc_solver_model_1_sparsity(7, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, nabla_c_sparse, nabla_c); }
+		 if( h ){ arc_solver_model_1_sparsity(4, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, h_sparse, h); }
+		 if( nabla_h ){ arc_solver_model_1_sparsity(5, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, nabla_h_sparse, nabla_h); }
 		 
 	 }
 
 	 if (stage >= 19 && stage < 20)
 	 {
+		 /* set inputs */
+		 out[2] = h_sparse;
+		 out[3] = nabla_h_sparse;
 		 /* call CasADi */
 		 arc_solver_model_20(in, out);
 
 		 /* copy to dense */
 		 if( nabla_f ){ arc_solver_model_20_sparsity(3, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, nabla_f_sparse, nabla_f); }
+		 if( h ){ arc_solver_model_20_sparsity(4, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, h_sparse, h); }
+		 if( nabla_h ){ arc_solver_model_20_sparsity(5, &nrow, &ncol, &colind, &row); sparse2fullCopy(nrow, ncol, colind, row, nabla_h_sparse, nabla_h); }
 		 
 	 }
 
