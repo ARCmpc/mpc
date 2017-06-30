@@ -203,10 +203,10 @@ std::cout<<"Param setted "<<std::endl;
 	{
 		local_past_path_.poses[i].pose.position=arc_tools::globalToLocal(past_path_.poses[i].pose.position,state_);
 	}
-	pub_path_.publish(local_path_);
+	pub_path_.publish(path_);
 	pub_fitted_curve_.publish(fitted_path_);
 	pub_planed_trajectory_.publish(planed_path_);
-	pub_past_position_.publish(local_past_path_);
+	pub_past_position_.publish(past_path_);
 	//END LOOP
 }
 
@@ -367,7 +367,7 @@ void MPC::findReferencePointsSpline()
 		j_end=indexOfDistanceFront(j_start,30).x;		//durch wieviele punkte nach vorne soll er durchsuchen, jetzt 20 m. Annahme, in einnem zeitschritt nie mehr als 20 m!!
 		j_next=localPointToPathIndex(ref_point , j_start , j_end);
 		//v_ref=v_ref_[j_next];
-		v_ref=4;//vRef(ref_point,j_start,j_end);
+		v_ref=3.5;//vRef(ref_point,j_start,j_end);
 		ref_v_.push_back(v_ref);
 		//Find reference orientation
 		ref_phi_.push_back(phiSpline(t_curr));
@@ -758,102 +758,102 @@ void MPC::writeTxt()	//write for test and safe paths
 
 		p.x=solver_output_.x01[2];
 		p.y=solver_output_.x01[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x02[2];
 		p.y=solver_output_.x02[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x03[2];
 		p.y=solver_output_.x03[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x04[2];
 		p.y=solver_output_.x04[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x05[2];
 		p.y=solver_output_.x05[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x06[2];
 		p.y=solver_output_.x06[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x07[2];
 		p.y=solver_output_.x07[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x08[2];
 		p.y=solver_output_.x08[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x09[2];
 		p.y=solver_output_.x09[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x10[2];
 		p.y=solver_output_.x10[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x11[2];
 		p.y=solver_output_.x11[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x12[2];
 		p.y=solver_output_.x12[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x13[2];
 		p.y=solver_output_.x13[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x14[2];
 		p.y=solver_output_.x14[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x15[2];
 		p.y=solver_output_.x15[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x16[2];
 		p.y=solver_output_.x16[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x17[2];
 		p.y=solver_output_.x17[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x18[2];
 		p.y=solver_output_.x18[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x19[2];
 		p.y=solver_output_.x19[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 
 		p.x=solver_output_.x20[2];
 		p.y=solver_output_.x20[3];
-		temp_pose.pose.position=p;
+		temp_pose.pose.position=localToGlobal(p,state_);
 		planed_path_.poses.push_back(temp_pose);
 	}
 }
@@ -937,8 +937,8 @@ void MPC::getOutputAndReact()
 	if(flag==1)
 	{
 	//Set inputs
-	u_.steering_angle=solver_output_.x01[1]*1.4;
-	u_.speed=4;//solver_output_.x01[4];
+	u_.steering_angle=solver_output_.x01[1];
+	u_.speed=3.5;//solver_output_.x01[4];
 	u_.acceleration=solver_output_.x01[0];
 	pub_stellgroessen_.publish(u_);
 	}
