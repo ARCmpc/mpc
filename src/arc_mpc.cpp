@@ -459,19 +459,19 @@ void MPC::setSolverParam()	//To test
 //Obstacle Parameters
 	solver_param_.all_parameters[i+11]=cluster_1_.x_center;
 	solver_param_.all_parameters[i+12]=cluster_1_.y_center;
-	solver_param_.all_parameters[i+13]=cluster_1_.radius;
+	solver_param_.all_parameters[i+13]=cluster_1_.radius+0.5;
 	solver_param_.all_parameters[i+14]=cluster_2_.x_center;
 	solver_param_.all_parameters[i+15]=cluster_2_.y_center;
-	solver_param_.all_parameters[i+16]=cluster_2_.radius;
+	solver_param_.all_parameters[i+16]=cluster_2_.radius+0.5;
 	solver_param_.all_parameters[i+17]=cluster_3_.x_center;
 	solver_param_.all_parameters[i+18]=cluster_3_.y_center;
-	solver_param_.all_parameters[i+19]=cluster_3_.radius;
+	solver_param_.all_parameters[i+19]=cluster_3_.radius+0.5;
 	solver_param_.all_parameters[i+20]=cluster_4_.x_center;
 	solver_param_.all_parameters[i+21]=cluster_4_.y_center;
-	solver_param_.all_parameters[i+22]=cluster_4_.radius;
+	solver_param_.all_parameters[i+22]=cluster_4_.radius+0.5;
 	solver_param_.all_parameters[i+23]=cluster_5_.x_center;
 	solver_param_.all_parameters[i+24]=cluster_5_.y_center;
-	solver_param_.all_parameters[i+25]=cluster_5_.radius;
+	solver_param_.all_parameters[i+25]=cluster_5_.radius+0.5;
 	}
 	//Initial guess
 	float z[N_STEPS*N_VAR];
@@ -1300,7 +1300,7 @@ void MPC::enframeCluster(cluster &actual_cluster)
 		west+=grid_width_/2;
 		actual_cluster.x_center=grid_resolution_*(north+south)/2;
 		actual_cluster.y_center=grid_resolution_*(east+west)/2;
-		float temp_radius=grid_resolution_*sqrt(pow(1+north-south,2)+pow(east-west-1,2))/2+2*CAR_RADIUS_FOR_OBSTACLE;
+		float temp_radius=grid_resolution_*sqrt(pow(1+north-south,2)+pow(east-west-1,2))/2+CAR_RADIUS_FOR_OBSTACLE;
 		actual_cluster.radius=std::min(float(2.5),temp_radius);
 		actual_cluster.radius=std::max(float(0.5),actual_cluster.radius);
 	}
